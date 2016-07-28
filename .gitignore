@@ -1,6 +1,9 @@
 # PyCharm IDE conf file
 /.idea/*
 
+# WOW API Credential
+/WOWrapper/APIcredential.csv
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
