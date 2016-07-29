@@ -4,6 +4,12 @@
 # WOW API Credential
 /WOWrapper/APIcredential.csv
 
+# SQLite DB
+#/DB/wow_db.sqlite
+
+# Json DB
+/DB/WOW/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

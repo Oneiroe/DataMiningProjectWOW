@@ -2,10 +2,11 @@
 # Functions to call transparently Blizzard API
 
 import requests
+import os
 
 ##### global variables
 # API Credentials
-credentials_file = open('APIcredential.csv', 'r')
+credentials_file = open(os.path.join(os.path.dirname(__file__),'APIcredential.csv'), 'r')
 API_KEY = credentials_file.readline().split(',')[1][0:-1]  # key to query the APIs
 API_SECRET_KEY = credentials_file.readline().split(',')[1][0:-1]  # key to perform query with sensible data
 LIMIT_CALL_PER_SEC = credentials_file.readline().split(',')[1][
@@ -62,7 +63,7 @@ def get_auction(nation, locale, realm, key=API_KEY):
 
 # A list of all supported bosses. A 'boss' in this context should be considered a boss encounter,
 # which may include more than one NPC.
-def get_boss_master_list(nation, locale, key=API_KEY):
+def get_boss_masterlist(nation, locale, key=API_KEY):
     link = "https://" + nation + ".api.battle.net/wow/boss/" + \
            "?locale=" + locale + \
            "&apikey=" + key
