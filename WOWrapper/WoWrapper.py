@@ -3,36 +3,104 @@
 
 import requests
 import os
+import json
+import time
 
 ##### global variables
 # API Credentials
-credentials_file = open(os.path.join(os.path.dirname(__file__),'APIcredential.csv'), 'r')
+credentials_file = open(os.path.join(os.path.dirname(__file__), 'APIcredential.csv'), 'r')
 API_KEY = credentials_file.readline().split(',')[1][0:-1]  # key to query the APIs
 API_SECRET_KEY = credentials_file.readline().split(',')[1][0:-1]  # key to perform query with sensible data
-LIMIT_CALL_PER_SEC = credentials_file.readline().split(',')[1][
-                     0:-1]  # call Rate Limits per second for a key. --100	Calls per second--
-LIMIT_CALL_PER_HOUR = credentials_file.readline().split(',')[
-    1]  # call Rate Limits per hour for a key --36,000	Calls per hour--
+LIMIT_CALL_PER_SEC = int(credentials_file.readline().split(',')[1][
+                         0:-1])  # call Rate Limits per second for a key. --100	Calls per second--
+LIMIT_CALL_PER_HOUR = int(credentials_file.readline().split(',')[
+                              1])  # call Rate Limits per hour for a key --36,000	Calls per hour--
 credentials_file.close()
+
+#
+MAX_ATTEMPTS = 10  # Maximal number of attempts for an API call before giving up
+CONNECTION_TIMEOUT = 3  # Timeout before raise a timeout exception (rises exponentially)
+LAST_CALL_TIMESTAMP = 0  # last api call timestamp
+MIN_TIME_LAPSE = 1 / (LIMIT_CALL_PER_HOUR / 3600)
+
+
+##################
+#### API CALL ####
+
+# call the api at the requested link
+def api_request(link):
+    global CONNECTION_TIMEOUT
+    global LAST_CALL_TIMESTAMP
+
+    # Check if between call is last enough time
+    if (time.time() - LAST_CALL_TIMESTAMP) < MIN_TIME_LAPSE:
+        time.sleep(1)
+    LAST_CALL_TIMESTAMP = time.time()
+
+    for attempt in range(MAX_ATTEMPTS):
+        try:
+            request = requests.get(link, timeout=CONNECTION_TIMEOUT)
+            request.raise_for_status()  # Rise exception if response code different from 200
+            response_json = request.json()
+            return [request.status_code, response_json]
+
+        # In the event of a network problem (e.g. DNS failure, refused connection, etc)
+        except requests.exceptions.ConnectionError as err:
+            print(err)
+            time.sleep(5)  # in sec
+            continue
+
+        # Triggered Timeout
+        except requests.exceptions.Timeout as err:
+            print(err)
+            time.sleep(5)  # in sec
+            CONNECTION_TIMEOUT += CONNECTION_TIMEOUT
+            print('new timeout for connections:' + str(CONNECTION_TIMEOUT))
+            continue
+
+        # Response code different from 200
+        except requests.exceptions.HTTPError as err:
+            print(err)
+            if request.status_code >= 500:
+                # Probable connection error, wait and retry
+                time.sleep(5)  # in sec
+                continue
+            return [request.status_code]
+
+        # Unknown ambiguous request error
+        except requests.exceptions.RequestException as err:
+            print(err)
+            return [0]
+
+        # Exception while decoding Json response
+        except json.decoder.JSONDecodeError as err:
+            # Probable incomplete or wrongly downloaded data, retry
+            print('Json decoding error')
+            print(err)
+            continue
+
+        # Generic Exception while decoding Json response
+        except ValueError as err:
+            # Probable incomplete or wrongly downloaded data, retry
+            print('Value error')
+            print(err)
+            continue
+    return [0]
+
 
 ###########################
 #### WRAPPER FUNCTIONS ####
-
+# the following function generate the request link for the API
 
 #####################
 #### ACHIEVEMENT ####
 
 # This provides data about an individual achievement.
 def get_achievement(nation, locale, achievement_id, key=API_KEY):
-    achievement_link = "https://" + nation + ".api.battle.net/wow/achievement/" + achievement_id + \
-                       "?locale=" + locale + \
-                       "&apikey=" + key
-    achievement = requests.get(achievement_link)
-    if achievement.status_code == 200:
-        achievement_json = achievement.json()
-        return [achievement.status_code, achievement_json]
-    else:
-        return [achievement.status_code]
+    link = "https://" + nation + ".api.battle.net/wow/achievement/" + achievement_id + \
+           "?locale=" + locale + \
+           "&apikey=" + key
+    return api_request(link)
 
 
 #################
@@ -45,17 +113,16 @@ def get_achievement(nation, locale, achievement_id, key=API_KEY):
 
 # This API resource provides a per-realm list of recently generated auction house data dumps.
 def get_auction(nation, locale, realm, key=API_KEY):
-    auction_link = "https://" + nation + ".api.battle.net/wow/auction/data/" + realm + \
-                   "?locale=" + locale + \
-                   "&apikey=" + key
-    auction = requests.get(auction_link)
-    if auction.status_code == 200:
-        auction_json = auction.json()
+    link = "https://" + nation + ".api.battle.net/wow/auction/data/" + realm + \
+           "?locale=" + locale + \
+           "&apikey=" + key
+    auction = api_request(link)
+    if auction[0] == 200:
+        auction_json = auction[1]
         # Second phase
-        auction_json = requests.get(auction_json['files'][0]['url']).json()
-        return [auction.status_code, auction_json]
+        return api_request(auction_json['files'][0]['url'])
     else:
-        return [auction.status_code]
+        return [auction[0]]
 
 
 ##############
@@ -67,12 +134,7 @@ def get_boss_masterlist(nation, locale, key=API_KEY):
     link = "https://" + nation + ".api.battle.net/wow/boss/" + \
            "?locale=" + locale + \
            "&apikey=" + key
-    request = requests.get(link)
-    if request.status_code == 200:
-        response_json = request.json()
-        return [request.status_code, response_json]
-    else:
-        return [request.status_code]
+    return api_request(link)
 
 
 # The boss API provides information about bosses. A 'boss' in this context should be considered a boss encounter,
@@ -81,12 +143,7 @@ def get_boss(nation, locale, boss_id, key=API_KEY):
     link = "https://" + nation + ".api.battle.net/wow/boss/" + boss_id + \
            "?locale=" + locale + \
            "&apikey=" + key
-    request = requests.get(link)
-    if request.status_code == 200:
-        response_json = request.json()
-        return [request.status_code, response_json]
-    else:
-        return [request.status_code]
+    return api_request(link)
 
 
 ###################
@@ -101,12 +158,7 @@ def get_realm_leaderboard(nation, locale, realm, key=API_KEY):
     link = "https://" + nation + ".api.battle.net/wow/challenge/" + realm + \
            "?locale=" + locale + \
            "&apikey=" + key
-    request = requests.get(link)
-    if request.status_code == 200:
-        response_json = request.json()
-        return [request.status_code, response_json]
-    else:
-        return [request.status_code]
+    return api_request(link)
 
 
 # The region leaderboard has the exact same data format as the realm leaderboards except there is no realm field.
@@ -115,12 +167,7 @@ def get_region_leaderboard(nation, locale, key=API_KEY):
     link = "https://" + nation + ".api.battle.net/wow/challenge/region" + \
            "?locale=" + locale + \
            "&apikey=" + key
-    request = requests.get(link)
-    if request.status_code == 200:
-        response_json = request.json()
-        return [request.status_code, response_json]
-    else:
-        return [request.status_code]
+    return api_request(link)
 
 
 ###################
@@ -134,61 +181,46 @@ def get_region_leaderboard(nation, locale, key=API_KEY):
 
 # Retrieve character basic info
 def get_character(nation, locale, realm, name, key=API_KEY):
-    character_link = "https://" + nation + ".api.battle.net/wow/character/" + realm + "/" + name + \
-                     "?locale=" + locale + \
-                     "&apikey=" + key
-    character = requests.get(character_link)
-    if character.status_code == 200:
-        character_json = character.json()
-        return [character.status_code, character_json]
-    else:
-        return [character.status_code]
+    link = "https://" + nation + ".api.battle.net/wow/character/" + realm + "/" + name + \
+           "?locale=" + locale + \
+           "&apikey=" + key
+    return api_request(link)
 
 
 # Retrieve character selected fields info
 def get_character_selected_fileds(nation, locale, realm, name, fields, key=API_KEY):
-    character_link = "https://" + nation + ".api.battle.net/wow/character/" + realm + "/" + name + \
-                     "?locale=" + locale + \
-                     "&apikey=" + key + \
-                     "&fields=" + fields
-    character = requests.get(character_link)
-    if character.status_code == 200:
-        character_json = character.json()
-        return [character.status_code, character_json]
-    else:
-        return [character.status_code]
+    link = "https://" + nation + ".api.battle.net/wow/character/" + realm + "/" + name + \
+           "?locale=" + locale + \
+           "&apikey=" + key + \
+           "&fields=" + fields
+    return api_request(link)
 
 
 # Retrieve character full info at once
 def get_character_full(nation, locale, realm, name, key=API_KEY):
-    character_link = "https://" + nation + ".api.battle.net/wow/character/" + realm + "/" + name + \
-                     "?locale=" + locale + \
-                     "&apikey=" + key + \
-                     "&fields=" + "achievements," \
-                                  "appearance," \
-                                  "feed," \
-                                  "guild," \
-                                  "hunterPets," \
-                                  "items," \
-                                  "mounts," \
-                                  "pets," \
-                                  "petSlots," \
-                                  "professions," \
-                                  "progression," \
-                                  "pvp," \
-                                  "quests," \
-                                  "reputation," \
-                                  "statistics," \
-                                  "stats," \
-                                  "talents," \
-                                  "titles," \
-                                  "audit"
-    character = requests.get(character_link)
-    if character.status_code == 200:
-        character_json = character.json()
-        return [character.status_code, character_json]
-    else:
-        return [character.status_code]
+    link = "https://" + nation + ".api.battle.net/wow/character/" + realm + "/" + name + \
+           "?locale=" + locale + \
+           "&apikey=" + key + \
+           "&fields=" + "achievements," \
+                        "appearance," \
+                        "feed," \
+                        "guild," \
+                        "hunterPets," \
+                        "items," \
+                        "mounts," \
+                        "pets," \
+                        "petSlots," \
+                        "professions," \
+                        "progression," \
+                        "pvp," \
+                        "quests," \
+                        "reputation," \
+                        "statistics," \
+                        "stats," \
+                        "talents," \
+                        "titles," \
+                        "audit"
+    return api_request(link)
 
 
 ###############
@@ -209,12 +241,7 @@ def get_guild(nation, locale, realm, guild_name, key=API_KEY):
     link = "https://" + nation + ".api.battle.net/wow/guild/" + realm + "/" + guild_name + \
            "?locale=" + locale + \
            "&apikey=" + key
-    request = requests.get(link)
-    if request.status_code == 200:
-        response_json = request.json()
-        return [request.status_code, response_json]
-    else:
-        return [request.status_code]
+    return api_request(link)
 
 
 # Retrieve guild selected fields info
@@ -223,12 +250,7 @@ def get_guild_selected_fields(nation, locale, realm, guild_name, fields, key=API
            "?locale=" + locale + \
            "&apikey=" + key + \
            "&fields=" + fields
-    request = requests.get(link)
-    if request.status_code == 200:
-        response_json = request.json()
-        return [request.status_code, response_json]
-    else:
-        return [request.status_code]
+    return api_request(link)
 
 
 # Retrieve guild full info at once
@@ -240,12 +262,7 @@ def get_guild_full(nation, locale, realm, guild_name, key=API_KEY):
                         "achievements," \
                         "news," \
                         "challenge"
-    request = requests.get(link)
-    if request.status_code == 200:
-        response_json = request.json()
-        return [request.status_code, response_json]
-    else:
-        return [request.status_code]
+    return api_request(link)
 
 
 ##############
@@ -256,12 +273,7 @@ def get_item(nation, locale, item_id, key=API_KEY):
     link = "https://" + nation + ".api.battle.net/wow/item/" + item_id + \
            "?locale=" + locale + \
            "&apikey=" + key
-    request = requests.get(link)
-    if request.status_code == 200:
-        response_json = request.json()
-        return [request.status_code, response_json]
-    else:
-        return [request.status_code]
+    return api_request(link)
 
 
 # This provides item set information.
@@ -269,12 +281,7 @@ def get_item_set(nation, locale, set_id, key=API_KEY):
     link = "https://" + nation + ".api.battle.net/wow/item/set/" + set_id + \
            "?locale=" + locale + \
            "&apikey=" + key
-    request = requests.get(link)
-    if request.status_code == 200:
-        response_json = request.json()
-        return [request.status_code, response_json]
-    else:
-        return [request.status_code]
+    return api_request(link)
 
 
 ###############
@@ -285,12 +292,7 @@ def get_mount_masterlist(nation, locale, key=API_KEY):
     link = "https://" + nation + ".api.battle.net/wow/mount/" + \
            "?locale=" + locale + \
            "&apikey=" + key
-    request = requests.get(link)
-    if request.status_code == 200:
-        response_json = request.json()
-        return [request.status_code, response_json]
-    else:
-        return [request.status_code]
+    return api_request(link)
 
 
 #############
@@ -301,12 +303,7 @@ def get_pet_masterlist(nation, locale, key=API_KEY):
     link = "https://" + nation + ".api.battle.net/wow/pet/" + \
            "?locale=" + locale + \
            "&apikey=" + key
-    request = requests.get(link)
-    if request.status_code == 200:
-        response_json = request.json()
-        return [request.status_code, response_json]
-    else:
-        return [request.status_code]
+    return api_request(link)
 
 
 # This provides data about a individual battle pet ability ID. We do not provide the tooltip for the ability yet.
@@ -315,12 +312,7 @@ def get_pet_ability(nation, locale, ability_id, key=API_KEY):
     link = "https://" + nation + ".api.battle.net/wow/pet/ability/" + ability_id + \
            "?locale=" + locale + \
            "&apikey=" + key
-    request = requests.get(link)
-    if request.status_code == 200:
-        response_json = request.json()
-        return [request.status_code, response_json]
-    else:
-        return [request.status_code]
+    return api_request(link)
 
 
 # This provides the data about an individual pet species.
@@ -330,12 +322,7 @@ def get_pet_species(nation, locale, species_id, key=API_KEY):
     link = "https://" + nation + ".api.battle.net/wow/pet/stat/" + species_id + \
            "?locale=" + locale + \
            "&apikey=" + key
-    request = requests.get(link)
-    if request.status_code == 200:
-        response_json = request.json()
-        return [request.status_code, response_json]
-    else:
-        return [request.status_code]
+    return api_request(link)
 
 
 # Retrieve detailed information about a given species of pet.
@@ -346,12 +333,7 @@ def get_pet_species_stat(nation, locale, species_id, level, breed_id, quality_id
            "&level=" + level + \
            "&breedId=" + breed_id + \
            "&qualityId=" + quality_id
-    request = requests.get(link)
-    if request.status_code == 200:
-        response_json = request.json()
-        return [request.status_code, response_json]
-    else:
-        return [request.status_code]
+    return api_request(link)
 
 
 ##############
@@ -362,12 +344,7 @@ def get_pvp_leaderboard(nation, locale, bracket, key=API_KEY):
     link = "https://" + nation + ".api.battle.net/wow/leaderboard/" + bracket + \
            "?locale=" + locale + \
            "&apikey=" + key
-    request = requests.get(link)
-    if request.status_code == 200:
-        response_json = request.json()
-        return [request.status_code, response_json]
-    else:
-        return [request.status_code]
+    return api_request(link)
 
 
 ###############
@@ -378,12 +355,7 @@ def get_quest(nation, locale, quest_id, key=API_KEY):
     link = "https://" + nation + ".api.battle.net/wow/quest/" + quest_id + \
            "?locale=" + locale + \
            "&apikey=" + key
-    request = requests.get(link)
-    if request.status_code == 200:
-        response_json = request.json()
-        return [request.status_code, response_json]
-    else:
-        return [request.status_code]
+    return api_request(link)
 
 
 ###############
@@ -400,12 +372,7 @@ def get_real_status(nation, locale, key=API_KEY):
     link = "https://" + nation + ".api.battle.net/wow/realm/status" + \
            "?locale=" + locale + \
            "&apikey=" + key
-    request = requests.get(link)
-    if request.status_code == 200:
-        response_json = request.json()
-        return [request.status_code, response_json]
-    else:
-        return [request.status_code]
+    return api_request(link)
 
 
 ################
@@ -416,12 +383,7 @@ def get_recipe(nation, locale, recipe_id, key=API_KEY):
     link = "https://" + nation + ".api.battle.net/wow/recipe/" + recipe_id + \
            "?locale=" + locale + \
            "&apikey=" + key
-    request = requests.get(link)
-    if request.status_code == 200:
-        response_json = request.json()
-        return [request.status_code, response_json]
-    else:
-        return [request.status_code]
+    return api_request(link)
 
 
 ###############
@@ -432,12 +394,7 @@ def get_spell(nation, locale, spell_id, key=API_KEY):
     link = "https://" + nation + ".api.battle.net/wow/spell/" + spell_id + \
            "?locale=" + locale + \
            "&apikey=" + key
-    request = requests.get(link)
-    if request.status_code == 200:
-        response_json = request.json()
-        return [request.status_code, response_json]
-    else:
-        return [request.status_code]
+    return api_request(link)
 
 
 ##############
@@ -450,12 +407,7 @@ def get_zone_masterlist(nation, locale, key=API_KEY):
     link = "https://" + nation + ".api.battle.net/wow/zone/" + \
            "?locale=" + locale + \
            "&apikey=" + key
-    request = requests.get(link)
-    if request.status_code == 200:
-        response_json = request.json()
-        return [request.status_code, response_json]
-    else:
-        return [request.status_code]
+    return api_request(link)
 
 
 # The Zone API provides some information about zones.
@@ -463,12 +415,7 @@ def get_zone(nation, locale, zone_id, key=API_KEY):
     link = "https://" + nation + ".api.battle.net/wow/zone/" + zone_id + \
            "?locale=" + locale + \
            "&apikey=" + key
-    request = requests.get(link)
-    if request.status_code == 200:
-        response_json = request.json()
-        return [request.status_code, response_json]
-    else:
-        return [request.status_code]
+    return api_request(link)
 
 
 ##############
@@ -479,12 +426,7 @@ def get_data_battlegroups(nation, locale, key=API_KEY):
     link = "https://" + nation + ".api.battle.net/wow/data/battlegroups/" + \
            "?locale=" + locale + \
            "&apikey=" + key
-    request = requests.get(link)
-    if request.status_code == 200:
-        response_json = request.json()
-        return [request.status_code, response_json]
-    else:
-        return [request.status_code]
+    return api_request(link)
 
 
 # The character races data API provides a list of each race and their associated faction, name, unique ID, and skin.
@@ -492,12 +434,7 @@ def get_data_races(nation, locale, key=API_KEY):
     link = "https://" + nation + ".api.battle.net/wow/data/character/races" + \
            "?locale=" + locale + \
            "&apikey=" + key
-    request = requests.get(link)
-    if request.status_code == 200:
-        response_json = request.json()
-        return [request.status_code, response_json]
-    else:
-        return [request.status_code]
+    return api_request(link)
 
 
 # The character classes data API provides a list of character classes.
@@ -505,12 +442,7 @@ def get_data_classes(nation, locale, key=API_KEY):
     link = "https://" + nation + ".api.battle.net/wow/data/character/classes" + \
            "?locale=" + locale + \
            "&apikey=" + key
-    request = requests.get(link)
-    if request.status_code == 200:
-        response_json = request.json()
-        return [request.status_code, response_json]
-    else:
-        return [request.status_code]
+    return api_request(link)
 
 
 # The character achievements data API provides a list of all of the achievements
@@ -519,12 +451,7 @@ def get_data_achievements(nation, locale, key=API_KEY):
     link = "https://" + nation + ".api.battle.net/wow/data/character/achievements" + \
            "?locale=" + locale + \
            "&apikey=" + key
-    request = requests.get(link)
-    if request.status_code == 200:
-        response_json = request.json()
-        return [request.status_code, response_json]
-    else:
-        return [request.status_code]
+    return api_request(link)
 
 
 # The guild rewards data API provides a list of all guild rewards.
@@ -532,12 +459,7 @@ def get_data_guild_rewards(nation, locale, key=API_KEY):
     link = "https://" + nation + ".api.battle.net/wow/data/guild/rewards" + \
            "?locale=" + locale + \
            "&apikey=" + key
-    request = requests.get(link)
-    if request.status_code == 200:
-        response_json = request.json()
-        return [request.status_code, response_json]
-    else:
-        return [request.status_code]
+    return api_request(link)
 
 
 # The guild perks data API provides a list of all guild perks.
@@ -545,12 +467,7 @@ def get_data_guild_perks(nation, locale, key=API_KEY):
     link = "https://" + nation + ".api.battle.net/wow/data/guild/perks" + \
            "?locale=" + locale + \
            "&apikey=" + key
-    request = requests.get(link)
-    if request.status_code == 200:
-        response_json = request.json()
-        return [request.status_code, response_json]
-    else:
-        return [request.status_code]
+    return api_request(link)
 
 
 # The guild achievements data API provides a list of all of the achievements
@@ -559,12 +476,7 @@ def get_data_guild_achievements(nation, locale, key=API_KEY):
     link = "https://" + nation + ".api.battle.net/wow/data/guild/achievements" + \
            "?locale=" + locale + \
            "&apikey=" + key
-    request = requests.get(link)
-    if request.status_code == 200:
-        response_json = request.json()
-        return [request.status_code, response_json]
-    else:
-        return [request.status_code]
+    return api_request(link)
 
 
 # The item classes data API provides a list of item classes
@@ -572,12 +484,7 @@ def get_data_item_classes(nation, locale, key=API_KEY):
     link = "https://" + nation + ".api.battle.net/wow/data/item/classes" + \
            "?locale=" + locale + \
            "&apikey=" + key
-    request = requests.get(link)
-    if request.status_code == 200:
-        response_json = request.json()
-        return [request.status_code, response_json]
-    else:
-        return [request.status_code]
+    return api_request(link)
 
 
 # The talents data API provides a list of talents, specs and glyphs for each class.
@@ -585,12 +492,7 @@ def get_data_talents(nation, locale, key=API_KEY):
     link = "https://" + nation + ".api.battle.net/wow/data/talents" + \
            "?locale=" + locale + \
            "&apikey=" + key
-    request = requests.get(link)
-    if request.status_code == 200:
-        response_json = request.json()
-        return [request.status_code, response_json]
-    else:
-        return [request.status_code]
+    return api_request(link)
 
 
 # The different bat pet types (including what they are strong and weak against)
@@ -598,9 +500,4 @@ def get_data_pet_types(nation, locale, key=API_KEY):
     link = "https://" + nation + ".api.battle.net/wow/data/pet/types" + \
            "?locale=" + locale + \
            "&apikey=" + key
-    request = requests.get(link)
-    if request.status_code == 200:
-        response_json = request.json()
-        return [request.status_code, response_json]
-    else:
-        return [request.status_code]
+    return api_request(link)
