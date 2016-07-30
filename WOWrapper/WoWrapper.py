@@ -5,6 +5,7 @@ import requests
 import os
 import json
 import time
+import logging
 
 ##### global variables
 # API Credentials
@@ -29,6 +30,7 @@ MIN_TIME_LAPSE = 1 / (LIMIT_CALL_PER_HOUR / 3600)
 
 # call the api at the requested link
 def api_request(link):
+    logging.info('START API request')
     global CONNECTION_TIMEOUT
     global LAST_CALL_TIMESTAMP
 
@@ -42,49 +44,51 @@ def api_request(link):
             request = requests.get(link, timeout=CONNECTION_TIMEOUT)
             request.raise_for_status()  # Rise exception if response code different from 200
             response_json = request.json()
+            logging.info('END API request')
             return [request.status_code, response_json]
 
         # In the event of a network problem (e.g. DNS failure, refused connection, etc)
         except requests.exceptions.ConnectionError as err:
-            print(err)
+            logging.warning(err)
             time.sleep(5)  # in sec
             continue
 
         # Triggered Timeout
         except requests.exceptions.Timeout as err:
-            print(err)
+            logging.warning(err)
             time.sleep(5)  # in sec
             CONNECTION_TIMEOUT += CONNECTION_TIMEOUT
-            print('new timeout for connections:' + str(CONNECTION_TIMEOUT))
+            logging.warning('new timeout for connections:' + str(CONNECTION_TIMEOUT))
             continue
 
         # Response code different from 200
         except requests.exceptions.HTTPError as err:
-            print(err)
+            logging.warning(err)
             if request.status_code >= 500:
                 # Probable connection error, wait and retry
                 time.sleep(5)  # in sec
                 continue
+            logging.info('END API request')
             return [request.status_code]
 
         # Unknown ambiguous request error
         except requests.exceptions.RequestException as err:
-            print(err)
+            logging.warning(err)
+            logging.info('END API request')
             return [0]
 
         # Exception while decoding Json response
         except json.decoder.JSONDecodeError as err:
             # Probable incomplete or wrongly downloaded data, retry
-            print('Json decoding error')
-            print(err)
+            logging.warning(err)
             continue
 
         # Generic Exception while decoding Json response
         except ValueError as err:
             # Probable incomplete or wrongly downloaded data, retry
-            print('Value error')
-            print(err)
+            logging.warning(err)
             continue
+    logging.info('END API request')
     return [0]
 
 
@@ -97,6 +101,7 @@ def api_request(link):
 
 # This provides data about an individual achievement.
 def get_achievement(nation, locale, achievement_id, key=API_KEY):
+    logging.info('get_achievement(' + nation + ', ' + locale + ', ' + achievement_id + '')
     link = "https://" + nation + ".api.battle.net/wow/achievement/" + achievement_id + \
            "?locale=" + locale + \
            "&apikey=" + key
@@ -113,6 +118,7 @@ def get_achievement(nation, locale, achievement_id, key=API_KEY):
 
 # This API resource provides a per-realm list of recently generated auction house data dumps.
 def get_auction(nation, locale, realm, key=API_KEY):
+    logging.info('get_auction(' + nation + ', ' + locale + ', ' + realm + ')')
     link = "https://" + nation + ".api.battle.net/wow/auction/data/" + realm + \
            "?locale=" + locale + \
            "&apikey=" + key
@@ -131,6 +137,7 @@ def get_auction(nation, locale, realm, key=API_KEY):
 # A list of all supported bosses. A 'boss' in this context should be considered a boss encounter,
 # which may include more than one NPC.
 def get_boss_masterlist(nation, locale, key=API_KEY):
+    logging.info('get_boss_masterlist(' + nation + ', ' + locale + ')')
     link = "https://" + nation + ".api.battle.net/wow/boss/" + \
            "?locale=" + locale + \
            "&apikey=" + key
@@ -140,6 +147,7 @@ def get_boss_masterlist(nation, locale, key=API_KEY):
 # The boss API provides information about bosses. A 'boss' in this context should be considered a boss encounter,
 # which may include more than one NPC.
 def get_boss(nation, locale, boss_id, key=API_KEY):
+    logging.info('get_boss(' + nation + ', ' + locale + ', ' + boss_id + '')
     link = "https://" + nation + ".api.battle.net/wow/boss/" + boss_id + \
            "?locale=" + locale + \
            "&apikey=" + key
@@ -155,6 +163,7 @@ def get_boss(nation, locale, boss_id, key=API_KEY):
 # The character data includes the current cached spec of the character
 # while the member field includes the spec of the character during the challenge mode run.
 def get_realm_leaderboard(nation, locale, realm, key=API_KEY):
+    logging.info('get_realm_leaderboard(' + nation + ', ' + locale + ', ' + realm + ')')
     link = "https://" + nation + ".api.battle.net/wow/challenge/" + realm + \
            "?locale=" + locale + \
            "&apikey=" + key
@@ -164,6 +173,7 @@ def get_realm_leaderboard(nation, locale, realm, key=API_KEY):
 # The region leaderboard has the exact same data format as the realm leaderboards except there is no realm field.
 # It is simply the top 100 results gathered for each map for all of the available realm leaderboards in a region.
 def get_region_leaderboard(nation, locale, key=API_KEY):
+    logging.info('get_region_leaderboard(' + nation + ', ' + locale + ')')
     link = "https://" + nation + ".api.battle.net/wow/challenge/region" + \
            "?locale=" + locale + \
            "&apikey=" + key
@@ -181,6 +191,7 @@ def get_region_leaderboard(nation, locale, key=API_KEY):
 
 # Retrieve character basic info
 def get_character(nation, locale, realm, name, key=API_KEY):
+    logging.info('get_character(' + nation + ', ' + locale + ', ' + realm + ', ' + name + ')')
     link = "https://" + nation + ".api.battle.net/wow/character/" + realm + "/" + name + \
            "?locale=" + locale + \
            "&apikey=" + key
@@ -189,6 +200,8 @@ def get_character(nation, locale, realm, name, key=API_KEY):
 
 # Retrieve character selected fields info
 def get_character_selected_fileds(nation, locale, realm, name, fields, key=API_KEY):
+    logging.info(
+        'get_character_selected_fileds(' + nation + ', ' + locale + ', ' + realm + ', ' + name + ', ' + fields + ')')
     link = "https://" + nation + ".api.battle.net/wow/character/" + realm + "/" + name + \
            "?locale=" + locale + \
            "&apikey=" + key + \
@@ -198,6 +211,7 @@ def get_character_selected_fileds(nation, locale, realm, name, fields, key=API_K
 
 # Retrieve character full info at once
 def get_character_full(nation, locale, realm, name, key=API_KEY):
+    logging.info('get_character_full(' + nation + ', ' + locale + ', ' + realm + ', ' + name + ')')
     link = "https://" + nation + ".api.battle.net/wow/character/" + realm + "/" + name + \
            "?locale=" + locale + \
            "&apikey=" + key + \
@@ -238,6 +252,7 @@ def get_character_full(nation, locale, realm, name, key=API_KEY):
 
 # Retrieve guild  basic info
 def get_guild(nation, locale, realm, guild_name, key=API_KEY):
+    logging.info('get_guild(' + nation + ', ' + locale + ', ' + realm + ', ' + guild_name + ')')
     link = "https://" + nation + ".api.battle.net/wow/guild/" + realm + "/" + guild_name + \
            "?locale=" + locale + \
            "&apikey=" + key
@@ -246,6 +261,8 @@ def get_guild(nation, locale, realm, guild_name, key=API_KEY):
 
 # Retrieve guild selected fields info
 def get_guild_selected_fields(nation, locale, realm, guild_name, fields, key=API_KEY):
+    logging.info(
+        'get_guild_selected_fields(' + nation + ', ' + locale + ', ' + realm + ', ' + guild_name + ', ' + fields + ')')
     link = "https://" + nation + ".api.battle.net/wow/guild/" + realm + "/" + guild_name + \
            "?locale=" + locale + \
            "&apikey=" + key + \
@@ -255,6 +272,7 @@ def get_guild_selected_fields(nation, locale, realm, guild_name, fields, key=API
 
 # Retrieve guild full info at once
 def get_guild_full(nation, locale, realm, guild_name, key=API_KEY):
+    logging.info('get_guild_full(' + nation + ', ' + locale + ', ' + realm + ', ' + guild_name + ')')
     link = "https://" + nation + ".api.battle.net/wow/guild/" + realm + "/" + guild_name + \
            "?locale=" + locale + \
            "&apikey=" + key + \
@@ -270,6 +288,7 @@ def get_guild_full(nation, locale, realm, guild_name, key=API_KEY):
 
 # The item API provides detailed item information. This includes item set information if this item is part of a set.
 def get_item(nation, locale, item_id, key=API_KEY):
+    logging.info('get_item(' + nation + ', ' + locale + ', ' + item_id + ')')
     link = "https://" + nation + ".api.battle.net/wow/item/" + item_id + \
            "?locale=" + locale + \
            "&apikey=" + key
@@ -278,6 +297,7 @@ def get_item(nation, locale, item_id, key=API_KEY):
 
 # This provides item set information.
 def get_item_set(nation, locale, set_id, key=API_KEY):
+    logging.info('get_item_set(' + nation + ', ' + locale + ', ' + set_id + '')
     link = "https://" + nation + ".api.battle.net/wow/item/set/" + set_id + \
            "?locale=" + locale + \
            "&apikey=" + key
@@ -289,6 +309,7 @@ def get_item_set(nation, locale, set_id, key=API_KEY):
 
 # A list of all supported mounts.
 def get_mount_masterlist(nation, locale, key=API_KEY):
+    logging.info('get_mount_masterlist(' + nation + ', ' + locale + ')')
     link = "https://" + nation + ".api.battle.net/wow/mount/" + \
            "?locale=" + locale + \
            "&apikey=" + key
@@ -300,6 +321,7 @@ def get_mount_masterlist(nation, locale, key=API_KEY):
 
 # A list of all supported battle and vanity pets.
 def get_pet_masterlist(nation, locale, key=API_KEY):
+    logging.info('get_pet_masterlist(' + nation + ', ' + locale + ')')
     link = "https://" + nation + ".api.battle.net/wow/pet/" + \
            "?locale=" + locale + \
            "&apikey=" + key
@@ -309,6 +331,7 @@ def get_pet_masterlist(nation, locale, key=API_KEY):
 # This provides data about a individual battle pet ability ID. We do not provide the tooltip for the ability yet.
 # We are working on a better way to provide this since it depends on your pet's species, level and quality rolls.
 def get_pet_ability(nation, locale, ability_id, key=API_KEY):
+    logging.info('get_pet_ability(' + nation + ', ' + locale + ', ' + ability_id + ')')
     link = "https://" + nation + ".api.battle.net/wow/pet/ability/" + ability_id + \
            "?locale=" + locale + \
            "&apikey=" + key
@@ -319,6 +342,7 @@ def get_pet_ability(nation, locale, ability_id, key=API_KEY):
 # The species IDs can be found your character profile using the options pets field.
 # Each species also has data about what it's 6 abilities are.
 def get_pet_species(nation, locale, species_id, key=API_KEY):
+    logging.info('get_pet_species(' + nation + ', ' + locale + ', ' + species_id + ')')
     link = "https://" + nation + ".api.battle.net/wow/pet/stat/" + species_id + \
            "?locale=" + locale + \
            "&apikey=" + key
@@ -327,6 +351,8 @@ def get_pet_species(nation, locale, species_id, key=API_KEY):
 
 # Retrieve detailed information about a given species of pet.
 def get_pet_species_stat(nation, locale, species_id, level, breed_id, quality_id, key=API_KEY):
+    logging.info(
+        'get_pet_species_stat(' + nation + ', ' + locale + ', ' + species_id + ', ' + level + ', ' + breed_id + ', ' + quality_id + '')
     link = "https://" + nation + ".api.battle.net/wow/pet/stats/" + species_id + \
            "?locale=" + locale + \
            "&apikey=" + key + \
@@ -336,11 +362,12 @@ def get_pet_species_stat(nation, locale, species_id, level, breed_id, quality_id
     return api_request(link)
 
 
-##############
+#############
 #### PVP ####
 
 # The Leaderboard API endpoint provides leaderboard information for the 2v2,3v3,5v5 and Rated Battleground leaderboards.
 def get_pvp_leaderboard(nation, locale, bracket, key=API_KEY):
+    logging.info('get_pvp_leaderboard(' + nation + ', ' + locale + ', ' + bracket + ')')
     link = "https://" + nation + ".api.battle.net/wow/leaderboard/" + bracket + \
            "?locale=" + locale + \
            "&apikey=" + key
@@ -352,6 +379,7 @@ def get_pvp_leaderboard(nation, locale, bracket, key=API_KEY):
 
 # Retrieve metadata for a given quest.
 def get_quest(nation, locale, quest_id, key=API_KEY):
+    logging.info('get_quest(' + nation + ', ' + locale + ', ' + quest_id + ')')
     link = "https://" + nation + ".api.battle.net/wow/quest/" + quest_id + \
            "?locale=" + locale + \
            "&apikey=" + key
@@ -369,6 +397,7 @@ def get_quest(nation, locale, quest_id, key=API_KEY):
 # although the optional realms parameter can be used to limit the realms returned to a specific set of realms.
 
 def get_real_status(nation, locale, key=API_KEY):
+    logging.info('get_real_status(' + nation + ', ' + locale + ')')
     link = "https://" + nation + ".api.battle.net/wow/realm/status" + \
            "?locale=" + locale + \
            "&apikey=" + key
@@ -380,6 +409,7 @@ def get_real_status(nation, locale, key=API_KEY):
 
 # The recipe API provides basic recipe information.
 def get_recipe(nation, locale, recipe_id, key=API_KEY):
+    logging.info('get_recipe(' + nation + ', ' + locale + ', ' + recipe_id + ')')
     link = "https://" + nation + ".api.battle.net/wow/recipe/" + recipe_id + \
            "?locale=" + locale + \
            "&apikey=" + key
@@ -391,6 +421,7 @@ def get_recipe(nation, locale, recipe_id, key=API_KEY):
 
 # The spell API provides some information about spells.
 def get_spell(nation, locale, spell_id, key=API_KEY):
+    logging.info('get_spell(' + nation + ', ' + locale + ', ' + spell_id + ')')
     link = "https://" + nation + ".api.battle.net/wow/spell/" + spell_id + \
            "?locale=" + locale + \
            "&apikey=" + key
@@ -404,6 +435,7 @@ def get_spell(nation, locale, spell_id, key=API_KEY):
 # A 'zone' in this context should be considered a dungeon, or a raid, not a zone as in a world zone.
 # A 'boss' in this context should be considered a boss encounter, which may include more than one NPC.
 def get_zone_masterlist(nation, locale, key=API_KEY):
+    logging.info('get_zone_masterlist(' + nation + ', ' + locale + ')')
     link = "https://" + nation + ".api.battle.net/wow/zone/" + \
            "?locale=" + locale + \
            "&apikey=" + key
@@ -412,6 +444,7 @@ def get_zone_masterlist(nation, locale, key=API_KEY):
 
 # The Zone API provides some information about zones.
 def get_zone(nation, locale, zone_id, key=API_KEY):
+    logging.info('get_zone(' + nation + ', ' + locale + ', ' + zone_id + '')
     link = "https://" + nation + ".api.battle.net/wow/zone/" + zone_id + \
            "?locale=" + locale + \
            "&apikey=" + key
@@ -423,6 +456,7 @@ def get_zone(nation, locale, zone_id, key=API_KEY):
 
 # The battlegroups data API provides the list of battlegroups for this region. Please note the trailing / on this URL.
 def get_data_battlegroups(nation, locale, key=API_KEY):
+    logging.info('get_data_battlegroups(' + nation + ', ' + locale + ')')
     link = "https://" + nation + ".api.battle.net/wow/data/battlegroups/" + \
            "?locale=" + locale + \
            "&apikey=" + key
@@ -431,6 +465,7 @@ def get_data_battlegroups(nation, locale, key=API_KEY):
 
 # The character races data API provides a list of each race and their associated faction, name, unique ID, and skin.
 def get_data_races(nation, locale, key=API_KEY):
+    logging.info('get_data_races(' + nation + ', ' + locale + ')')
     link = "https://" + nation + ".api.battle.net/wow/data/character/races" + \
            "?locale=" + locale + \
            "&apikey=" + key
@@ -439,6 +474,7 @@ def get_data_races(nation, locale, key=API_KEY):
 
 # The character classes data API provides a list of character classes.
 def get_data_classes(nation, locale, key=API_KEY):
+    logging.info('get_data_classes(' + nation + ', ' + locale + ')')
     link = "https://" + nation + ".api.battle.net/wow/data/character/classes" + \
            "?locale=" + locale + \
            "&apikey=" + key
@@ -448,6 +484,7 @@ def get_data_classes(nation, locale, key=API_KEY):
 # The character achievements data API provides a list of all of the achievements
 # that characters can earn as well as the category structure and hierarchy.
 def get_data_achievements(nation, locale, key=API_KEY):
+    logging.info('get_data_achievements(' + nation + ', ' + locale + ')')
     link = "https://" + nation + ".api.battle.net/wow/data/character/achievements" + \
            "?locale=" + locale + \
            "&apikey=" + key
@@ -456,6 +493,7 @@ def get_data_achievements(nation, locale, key=API_KEY):
 
 # The guild rewards data API provides a list of all guild rewards.
 def get_data_guild_rewards(nation, locale, key=API_KEY):
+    logging.info('get_data_guild_rewards(' + nation + ', ' + locale + ')')
     link = "https://" + nation + ".api.battle.net/wow/data/guild/rewards" + \
            "?locale=" + locale + \
            "&apikey=" + key
@@ -464,6 +502,7 @@ def get_data_guild_rewards(nation, locale, key=API_KEY):
 
 # The guild perks data API provides a list of all guild perks.
 def get_data_guild_perks(nation, locale, key=API_KEY):
+    logging.info('get_data_guild_perks(' + nation + ', ' + locale + ')')
     link = "https://" + nation + ".api.battle.net/wow/data/guild/perks" + \
            "?locale=" + locale + \
            "&apikey=" + key
@@ -473,6 +512,7 @@ def get_data_guild_perks(nation, locale, key=API_KEY):
 # The guild achievements data API provides a list of all of the achievements
 # that guilds can earn as well as the category structure and hierarchy.
 def get_data_guild_achievements(nation, locale, key=API_KEY):
+    logging.info('get_data_guild_achievements(' + nation + ', ' + locale + ')')
     link = "https://" + nation + ".api.battle.net/wow/data/guild/achievements" + \
            "?locale=" + locale + \
            "&apikey=" + key
@@ -481,6 +521,7 @@ def get_data_guild_achievements(nation, locale, key=API_KEY):
 
 # The item classes data API provides a list of item classes
 def get_data_item_classes(nation, locale, key=API_KEY):
+    logging.info('get_data_item_classes(' + nation + ', ' + locale + ')')
     link = "https://" + nation + ".api.battle.net/wow/data/item/classes" + \
            "?locale=" + locale + \
            "&apikey=" + key
@@ -489,6 +530,7 @@ def get_data_item_classes(nation, locale, key=API_KEY):
 
 # The talents data API provides a list of talents, specs and glyphs for each class.
 def get_data_talents(nation, locale, key=API_KEY):
+    logging.info('get_data_talents(' + nation + ', ' + locale + ')')
     link = "https://" + nation + ".api.battle.net/wow/data/talents" + \
            "?locale=" + locale + \
            "&apikey=" + key
@@ -497,6 +539,7 @@ def get_data_talents(nation, locale, key=API_KEY):
 
 # The different bat pet types (including what they are strong and weak against)
 def get_data_pet_types(nation, locale, key=API_KEY):
+    logging.info('get_data_pet_types(' + nation + ', ' + locale + ')')
     link = "https://" + nation + ".api.battle.net/wow/data/pet/types" + \
            "?locale=" + locale + \
            "&apikey=" + key
