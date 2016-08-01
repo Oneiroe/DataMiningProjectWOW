@@ -396,7 +396,7 @@ def get_quest(nation, locale, quest_id, key=API_KEY):
 # There are no required query string parameters when accessing this resource,
 # although the optional realms parameter can be used to limit the realms returned to a specific set of realms.
 
-def get_real_status(nation, locale, key=API_KEY):
+def get_realm_status(nation, locale, key=API_KEY):
     logging.info('get_real_status(' + nation + ', ' + locale + ')')
     link = "https://" + nation + ".api.battle.net/wow/realm/status" + \
            "?locale=" + locale + \
