@@ -50,7 +50,9 @@ def api_request(link):
         # In the event of a network problem (e.g. DNS failure, refused connection, etc)
         except requests.exceptions.ConnectionError as err:
             logging.warning(err)
-            time.sleep(5)  # in sec
+            time.sleep(CONNECTION_TIMEOUT)  # in sec
+            CONNECTION_TIMEOUT += CONNECTION_TIMEOUT
+            logging.warning('new timeout for connections:' + str(CONNECTION_TIMEOUT))
             continue
 
         # Triggered Timeout
@@ -66,7 +68,9 @@ def api_request(link):
             logging.warning(err)
             if request.status_code >= 500:
                 # Probable connection error, wait and retry
-                time.sleep(5)  # in sec
+                time.sleep(CONNECTION_TIMEOUT)  # in sec
+                CONNECTION_TIMEOUT += CONNECTION_TIMEOUT
+                logging.warning('new timeout for connections:' + str(CONNECTION_TIMEOUT))
                 continue
             logging.info('END API request')
             return [request.status_code]
