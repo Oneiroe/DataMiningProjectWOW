@@ -21,6 +21,7 @@ credentials_file.close()
 #
 MAX_ATTEMPTS = 10  # Maximal number of attempts for an API call before giving up
 CONNECTION_TIMEOUT = 3  # Timeout before raise a timeout exception (rises exponentially)
+RETRY_TIMEOUT = 5  # Timeout before retry a request after receiving a 50x HTTP error
 LAST_CALL_TIMESTAMP = 0  # last api call timestamp
 MIN_TIME_LAPSE = 1 / (LIMIT_CALL_PER_HOUR / 3600)
 
@@ -33,6 +34,7 @@ def api_request(link):
     logging.info('START API request')
     global CONNECTION_TIMEOUT
     global LAST_CALL_TIMESTAMP
+    global RETRY_TIMEOUT
 
     # Check if between call is last enough time
     if (time.time() - LAST_CALL_TIMESTAMP) < MIN_TIME_LAPSE:
@@ -50,9 +52,9 @@ def api_request(link):
         # In the event of a network problem (e.g. DNS failure, refused connection, etc)
         except requests.exceptions.ConnectionError as err:
             logging.warning(err)
-            time.sleep(CONNECTION_TIMEOUT)  # in sec
-            CONNECTION_TIMEOUT += CONNECTION_TIMEOUT
-            logging.warning('new timeout for connections:' + str(CONNECTION_TIMEOUT))
+            time.sleep(RETRY_TIMEOUT)  # in sec
+            RETRY_TIMEOUT += RETRY_TIMEOUT
+            logging.warning('new retry time for requests:' + str(RETRY_TIMEOUT))
             continue
 
         # Triggered Timeout
@@ -68,9 +70,9 @@ def api_request(link):
             logging.warning(err)
             if request.status_code >= 500:
                 # Probable connection error, wait and retry
-                time.sleep(CONNECTION_TIMEOUT)  # in sec
-                CONNECTION_TIMEOUT += CONNECTION_TIMEOUT
-                logging.warning('new timeout for connections:' + str(CONNECTION_TIMEOUT))
+                time.sleep(RETRY_TIMEOUT)  # in sec
+                RETRY_TIMEOUT += RETRY_TIMEOUT
+                logging.warning('new retry time for requests:' + str(RETRY_TIMEOUT))
                 continue
             logging.info('END API request')
             return [request.status_code]
