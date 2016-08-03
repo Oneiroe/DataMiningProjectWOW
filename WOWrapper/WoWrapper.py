@@ -54,6 +54,8 @@ def api_request(link):
             logging.warning(err)
             time.sleep(RETRY_TIMEOUT)  # in sec
             RETRY_TIMEOUT += RETRY_TIMEOUT
+            if(RETRY_TIMEOUT>3600):
+                RETRY_TIMEOUT=1200
             logging.warning('new retry time for requests:' + str(RETRY_TIMEOUT))
             continue
 
@@ -68,14 +70,17 @@ def api_request(link):
         # Response code different from 200
         except requests.exceptions.HTTPError as err:
             logging.warning(err)
-            if request.status_code >= 500:
+            if request.status_code > 500:
                 # Probable connection error, wait and retry
                 time.sleep(RETRY_TIMEOUT)  # in sec
                 RETRY_TIMEOUT += RETRY_TIMEOUT
+                if(RETRY_TIMEOUT>3600):
+                    RETRY_TIMEOUT=1200
                 logging.warning('new retry time for requests:' + str(RETRY_TIMEOUT))
                 continue
-            logging.info('END API request')
-            return [request.status_code]
+            else:
+                logging.info('END API request')
+                return [request.status_code]
 
         # Unknown ambiguous request error
         except requests.exceptions.RequestException as err:
