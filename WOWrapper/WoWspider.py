@@ -8,6 +8,7 @@ import json
 import time
 import logging
 import types
+import sys
 
 ##### global variables
 # API Credentials
@@ -54,7 +55,7 @@ MIN_TIME_LAPSE = 1 / (LIMIT_CALL_PER_HOUR / 3600)
 
 # Achievement -> reward_item
 def search_in_achievement(file_path):
-    logging.info('search_in_achievement(' + file_path + ')')
+    logging.debug('search_in_achievement(' + file_path + ')')
     result = {'item_id': set()}
 
     try:
@@ -62,11 +63,11 @@ def search_in_achievement(file_path):
         json_file = json.load(f)
     except json.JSONDecodeError as err:
         # error decoding json
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     except OSError as err:
         # error reading file
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     else:
         # retrieve reward item
@@ -83,7 +84,7 @@ def search_in_achievement(file_path):
 
 # Auctions -> item, character, realm
 def search_in_auction(file_path):
-    logging.info('search_in_auction(' + file_path + ')')
+    logging.debug('search_in_auction(' + file_path + ')')
     result = {'item_id': set(),
               'character': set(),
               'realm': set(),
@@ -95,11 +96,11 @@ def search_in_auction(file_path):
         json_file = json.load(f)
     except json.JSONDecodeError as err:
         # error decoding json
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     except OSError as err:
         # error reading file
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     else:
         for auc in json_file['auctions']:
@@ -121,7 +122,7 @@ def search_in_auction(file_path):
 
 # boss_masterlist -> boss, zone
 def search_in_boss_masterlist(file_path):
-    logging.info('search_in_boss_masterlist(' + file_path + ')')
+    logging.debug('search_in_boss_masterlist(' + file_path + ')')
     result = {'boss_id': set(),
               'zone_id': set(),
               }
@@ -131,11 +132,11 @@ def search_in_boss_masterlist(file_path):
         json_file = json.load(f)
     except json.JSONDecodeError as err:
         # error decoding json
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     except OSError as err:
         # error reading file
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     else:
         try:
@@ -160,7 +161,7 @@ def search_in_boss_masterlist(file_path):
 
 # boss -> zone
 def search_in_boss(file_path):
-    logging.info('search_in_boss(' + file_path + ')')
+    logging.debug('search_in_boss(' + file_path + ')')
     result = {'zone_id': set()}
 
     try:
@@ -168,11 +169,11 @@ def search_in_boss(file_path):
         json_file = json.load(f)
     except json.JSONDecodeError as err:
         # error decoding json
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     except OSError as err:
         # error reading file
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     else:
         try:
@@ -191,7 +192,7 @@ def search_in_boss(file_path):
 # The character data includes the current cached spec of the character
 # while the member field includes the spec of the character during the challenge mode run.
 def search_in_realm_leaderboard(file_path):
-    logging.info('search_in_realm_leaderboard(' + file_path + ')')
+    logging.debug('search_in_realm_leaderboard(' + file_path + ')')
     result = {'character': set(),
               'realm': set(),
               'character_name': set(),
@@ -204,11 +205,11 @@ def search_in_realm_leaderboard(file_path):
         json_file = json.load(f)
     except json.JSONDecodeError as err:
         # error decoding json
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     except OSError as err:
         # error reading file
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     else:
         try:
@@ -246,7 +247,7 @@ def search_in_realm_leaderboard(file_path):
 # The region leaderboard has the exact same data format as the realm leaderboards except there is no realm field.
 # It is simply the top 100 results gathered for each map for all of the available realm leaderboards in a region.
 def search_in_region_leaderboard(file_path):
-    logging.info('search_in_region_leaderboard(' + file_path + ')')
+    logging.debug('search_in_region_leaderboard(' + file_path + ')')
     result = {'character': set(),
               'realm': set(),
               'character_name': set(),
@@ -259,11 +260,11 @@ def search_in_region_leaderboard(file_path):
         json_file = json.load(f)
     except json.JSONDecodeError as err:
         # error decoding json
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     except OSError as err:
         # error reading file
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     else:
         try:
@@ -322,11 +323,11 @@ def search_in_region_leaderboard(file_path):
 #         json_file = json.load(f)
 #     except json.JSONDecodeError as err:
 #         # error decoding json
-#         logging.warning(err)
+#         logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
 #         return {}
 #     except OSError as err:
 #         # error reading file
-#         logging.warning(err)
+#         logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
 #         return {}
 #     else:
 #         return result
@@ -355,11 +356,11 @@ def search_in_region_leaderboard(file_path):
 #         json_file = json.load(f)
 #     except json.JSONDecodeError as err:
 #         # error decoding json
-#         logging.warning(err)
+#         logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
 #         return {}
 #     except OSError as err:
 #         # error reading file
-#         logging.warning(err)
+#         logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
 #         return {}
 #     else:
 #
@@ -368,7 +369,7 @@ def search_in_region_leaderboard(file_path):
 
 # Retrieve character full info at once
 def search_in_character_full(file_path):
-    logging.info('search_in_character_full(' + file_path + ')')
+    logging.debug('search_in_character_full(' + file_path + ')')
     result = {'item_id': set(),
               'realm': set(),
               'guild': set(),  # CSV guild_name, realm
@@ -386,11 +387,11 @@ def search_in_character_full(file_path):
         json_file = json.load(f)
     except json.JSONDecodeError as err:
         # error decoding json
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     except OSError as err:
         # error reading file
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     else:
         try:
@@ -438,16 +439,17 @@ def search_in_character_full(file_path):
         except KeyError:
             pass
 
-        try:
-            # SPELL FROM TALENT
-            for app in json_file['talents']:
-                for talent in app['talents']:
-                    for app_due in talent:
-                        for app_tre in app_due:
-                            for tier in app_tre:
-                                result['spell_id'].add(tier['spell']['id'])
-        except KeyError:
-            pass
+        #try:
+        #    # SPELL FROM TALENT
+        #    logging.warning('SPELL FROM TALENTS')
+        #    for app in json_file['talents']:
+        #        for talent in app['talents']:
+        #            for app_due in talent:
+        #                for app_tre in app_due:
+        #                    for tier in app_tre:
+        #                        result['spell_id'].add(tier['spell']['id'])
+        #except KeyError:
+        #    pass
 
         try:
             # GUILD
@@ -495,11 +497,11 @@ def search_in_character_full(file_path):
 #         json_file = json.load(f)
 #     except json.JSONDecodeError as err:
 #         # error decoding json
-#         logging.warning(err)
+#         logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
 #         return {}
 #     except OSError as err:
 #         # error reading file
-#         logging.warning(err)
+#         logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
 #         return {}
 #     else:
 #         return result
@@ -528,11 +530,11 @@ def search_in_character_full(file_path):
 #         json_file = json.load(f)
 #     except json.JSONDecodeError as err:
 #         # error decoding json
-#         logging.warning(err)
+#         logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
 #         return {}
 #     except OSError as err:
 #         # error reading file
-#         logging.warning(err)
+#         logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
 #         return {}
 #     else:
 #         return result
@@ -540,7 +542,7 @@ def search_in_character_full(file_path):
 
 # Retrieve guild full info at once
 def search_in_guild_full(file_path):
-    logging.info('search_in_guild_full(' + file_path + ')')
+    logging.debug('search_in_guild_full(' + file_path + ')')
     result = {'item_id': set(),
               'character': set(),
               'realm': set(),
@@ -560,15 +562,16 @@ def search_in_guild_full(file_path):
         json_file = json.load(f)
     except json.JSONDecodeError as err:
         # error decoding json
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     except OSError as err:
         # error reading file
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     else:
         try:
             # CHALLENGE
+            logging.warning('CHALLENGE')
             for challenge in json_file['challenge']:
                 try:
                     result['realm'].add(challenge['realm']['slug'])
@@ -618,7 +621,7 @@ def search_in_guild_full(file_path):
 
 # The item API provides detailed item information. This includes item set information if this item is part of a set.
 def search_in_item(file_path):
-    logging.info('search_in_item(' + file_path + ')')
+    logging.debug('search_in_item(' + file_path + ')')
     result = {'item_id': set(),
               'character': set(),
               'realm': set(),
@@ -639,11 +642,11 @@ def search_in_item(file_path):
         json_file = json.load(f)
     except json.JSONDecodeError as err:
         # error decoding json
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     except OSError as err:
         # error reading file
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     else:
         try:
@@ -662,7 +665,7 @@ def search_in_item(file_path):
 
 # This provides item set information.
 def search_in_item_set(file_path):
-    logging.info('search_in_item_set(' + file_path + ')')
+    logging.debug('search_in_item_set(' + file_path + ')')
     result = {'item_id': set(),
               'character': set(),
               'realm': set(),
@@ -682,11 +685,11 @@ def search_in_item_set(file_path):
         json_file = json.load(f)
     except json.JSONDecodeError as err:
         # error decoding json
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     except OSError as err:
         # error reading file
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     else:
         try:
@@ -702,7 +705,7 @@ def search_in_item_set(file_path):
 
 # A list of all supported mounts.
 def search_in_mount_masterlist(file_path):
-    logging.info('search_in_mount_masterlist(' + file_path + ')')
+    logging.debug('search_in_mount_masterlist(' + file_path + ')')
     result = {'item_id': set(),
               'character': set(),
               'realm': set(),
@@ -722,11 +725,11 @@ def search_in_mount_masterlist(file_path):
         json_file = json.load(f)
     except json.JSONDecodeError as err:
         # error decoding json
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     except OSError as err:
         # error reading file
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     else:
         try:
@@ -743,7 +746,7 @@ def search_in_mount_masterlist(file_path):
 
 # A list of all supported battle and vanity pets.
 def search_in_pet_masterlist(file_path):
-    logging.info('search_in_pet_masterlist(' + file_path + ')')
+    logging.debug('search_in_pet_masterlist(' + file_path + ')')
     result = {'item_id': set(),
               'character': set(),
               'realm': set(),
@@ -763,11 +766,11 @@ def search_in_pet_masterlist(file_path):
         json_file = json.load(f)
     except json.JSONDecodeError as err:
         # error decoding json
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     except OSError as err:
         # error reading file
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     else:
         try:
@@ -781,7 +784,7 @@ def search_in_pet_masterlist(file_path):
 # This provides data about a individual battle pet ability ID. We do not provide the tooltip for the ability yet.
 # We are working on a better way to provide this since it depends on your pet's species, level and quality rolls.
 def search_in_pet_ability(file_path):
-    logging.info('search_in_pet_ability(' + file_path + ')')
+    logging.debug('search_in_pet_ability(' + file_path + ')')
     result = {'item_id': set(),
               'character': set(),
               'realm': set(),
@@ -801,11 +804,11 @@ def search_in_pet_ability(file_path):
         json_file = json.load(f)
     except json.JSONDecodeError as err:
         # error decoding json
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     except OSError as err:
         # error reading file
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     else:
         # noting to return
@@ -816,7 +819,7 @@ def search_in_pet_ability(file_path):
 # The species IDs can be found your character profile using the options pets field.
 # Each species also has data about what it's 6 abilities are.
 def search_in_pet_species(file_path):
-    logging.info('search_in_pet_species(' + file_path + ')')
+    logging.debug('search_in_pet_species(' + file_path + ')')
     result = {'item_id': set(),
               'character': set(),
               'realm': set(),
@@ -836,11 +839,11 @@ def search_in_pet_species(file_path):
         json_file = json.load(f)
     except json.JSONDecodeError as err:
         # error decoding json
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     except OSError as err:
         # error reading file
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     else:
         try:
@@ -853,7 +856,7 @@ def search_in_pet_species(file_path):
 
 # Retrieve detailed information about a given species of pet.
 def search_in_pet_species_stat(file_path):
-    logging.info('search_in_pet_species_stat(' + file_path + ')')
+    logging.debug('search_in_pet_species_stat(' + file_path + ')')
     result = {'item_id': set(),
               'character': set(),
               'realm': set(),
@@ -873,11 +876,11 @@ def search_in_pet_species_stat(file_path):
         json_file = json.load(f)
     except json.JSONDecodeError as err:
         # error decoding json
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     except OSError as err:
         # error reading file
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     else:
         # nothing to return
@@ -889,7 +892,7 @@ def search_in_pet_species_stat(file_path):
 
 # The Leaderboard API endpoint provides leaderboard information for the 2v2,3v3,5v5 and Rated Battleground leaderboards.
 def search_in_pvp_leaderboard(file_path):
-    logging.info('search_in_pvp_leaderboard(' + file_path + ')')
+    logging.debug('search_in_pvp_leaderboard(' + file_path + ')')
     result = {'item_id': set(),
               'character': set(),
               'realm': set(),
@@ -909,11 +912,11 @@ def search_in_pvp_leaderboard(file_path):
         json_file = json.load(f)
     except json.JSONDecodeError as err:
         # error decoding json
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     except OSError as err:
         # error reading file
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     else:
         try:
@@ -934,7 +937,7 @@ def search_in_pvp_leaderboard(file_path):
 
 # Retrieve metadata for a given quest.
 def search_in_quest(file_path):
-    logging.info('search_in_quest(' + file_path + ')')
+    logging.debug('search_in_quest(' + file_path + ')')
     result = {'item_id': set(),
               'character': set(),
               'realm': set(),
@@ -954,11 +957,11 @@ def search_in_quest(file_path):
         json_file = json.load(f)
     except json.JSONDecodeError as err:
         # error decoding json
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     except OSError as err:
         # error reading file
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     else:
         # nothing to return
@@ -976,7 +979,7 @@ def search_in_quest(file_path):
 # although the optional realms parameter can be used to limit the realms returned to a specific set of realms.
 
 def search_in_realm_status(file_path):
-    logging.info('search_in_realm_status(' + file_path + ')')
+    logging.debug('search_in_realm_status(' + file_path + ')')
     result = {'item_id': set(),
               'character': set(),
               'realm': set(),
@@ -996,11 +999,11 @@ def search_in_realm_status(file_path):
         json_file = json.load(f)
     except json.JSONDecodeError as err:
         # error decoding json
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     except OSError as err:
         # error reading file
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     else:
         try:
@@ -1021,7 +1024,7 @@ def search_in_realm_status(file_path):
 
 # The recipe API provides basic recipe information.
 def search_in_recipe(file_path):
-    logging.info('search_in_recipe(' + file_path + ')')
+    logging.debug('search_in_recipe(' + file_path + ')')
     result = {'item_id': set(),
               'character': set(),
               'realm': set(),
@@ -1041,11 +1044,11 @@ def search_in_recipe(file_path):
         json_file = json.load(f)
     except json.JSONDecodeError as err:
         # error decoding json
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     except OSError as err:
         # error reading file
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     else:
         # nothing to return
@@ -1057,7 +1060,7 @@ def search_in_recipe(file_path):
 
 # The spell API provides some information about spells.
 def search_in_spell(file_path):
-    logging.info('search_in_spell(' + file_path + ')')
+    logging.debug('search_in_spell(' + file_path + ')')
     result = {'item_id': set(),
               'character': set(),
               'realm': set(),
@@ -1077,11 +1080,11 @@ def search_in_spell(file_path):
         json_file = json.load(f)
     except json.JSONDecodeError as err:
         # error decoding json
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     except OSError as err:
         # error reading file
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     else:
         # nothing to return
@@ -1095,7 +1098,7 @@ def search_in_spell(file_path):
 # A 'zone' in this context should be considered a dungeon, or a raid, not a zone as in a world zone.
 # A 'boss' in this context should be considered a boss encounter, which may include more than one NPC.
 def search_in_zone_masterlist(file_path):
-    logging.info('search_in_zone_masterlist(' + file_path + ')')
+    logging.debug('search_in_zone_masterlist(' + file_path + ')')
     result = {'item_id': set(),
               'character': set(),
               'realm': set(),
@@ -1115,11 +1118,11 @@ def search_in_zone_masterlist(file_path):
         json_file = json.load(f)
     except json.JSONDecodeError as err:
         # error decoding json
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     except OSError as err:
         # error reading file
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     else:
         try:
@@ -1132,7 +1135,7 @@ def search_in_zone_masterlist(file_path):
 
 # The Zone API provides some information about zones.
 def search_in_zone(file_path):
-    logging.info('search_in_zone(' + file_path + ')')
+    logging.debug('search_in_zone(' + file_path + ')')
     result = {'item_id': set(),
               'character': set(),
               'realm': set(),
@@ -1152,11 +1155,11 @@ def search_in_zone(file_path):
         json_file = json.load(f)
     except json.JSONDecodeError as err:
         # error decoding json
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     except OSError as err:
         # error reading file
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     else:
         # nothing to return
@@ -1168,7 +1171,7 @@ def search_in_zone(file_path):
 
 # The battlegroups data API provides the list of battlegroups for this region. Please note the trailing / on this URL.
 def search_in_data_battlegroups(file_path):
-    logging.info('search_in_data_battlegroups(' + file_path + ')')
+    logging.debug('search_in_data_battlegroups(' + file_path + ')')
     result = {'item_id': set(),
               'character': set(),
               'realm': set(),
@@ -1188,11 +1191,11 @@ def search_in_data_battlegroups(file_path):
         json_file = json.load(f)
     except json.JSONDecodeError as err:
         # error decoding json
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     except OSError as err:
         # error reading file
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     else:
         # nothing to return
@@ -1201,7 +1204,7 @@ def search_in_data_battlegroups(file_path):
 
 # The character races data API provides a list of each race and their associated faction, name, unique ID, and skin.
 def search_in_data_races(file_path):
-    logging.info('search_in_data_races(' + file_path + ')')
+    logging.debug('search_in_data_races(' + file_path + ')')
     result = {'item_id': set(),
               'character': set(),
               'realm': set(),
@@ -1221,11 +1224,11 @@ def search_in_data_races(file_path):
         json_file = json.load(f)
     except json.JSONDecodeError as err:
         # error decoding json
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     except OSError as err:
         # error reading file
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     else:
         # nothing to return
@@ -1234,7 +1237,7 @@ def search_in_data_races(file_path):
 
 # The character classes data API provides a list of character classes.
 def search_in_data_classes(file_path):
-    logging.info('search_in_data_classes(' + file_path + ')')
+    logging.debug('search_in_data_classes(' + file_path + ')')
     result = {'item_id': set(),
               'character': set(),
               'realm': set(),
@@ -1254,11 +1257,11 @@ def search_in_data_classes(file_path):
         json_file = json.load(f)
     except json.JSONDecodeError as err:
         # error decoding json
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     except OSError as err:
         # error reading file
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     else:
         # nothing to return
@@ -1268,7 +1271,7 @@ def search_in_data_classes(file_path):
 # The character achievements data API provides a list of all of the achievements
 # that characters can earn as well as the category structure and hierarchy.
 def search_in_data_achievements(file_path):
-    logging.info('search_in_data_achievements(' + file_path + ')')
+    logging.debug('search_in_data_achievements(' + file_path + ')')
     result = {'item_id': set(),
               'character': set(),
               'realm': set(),
@@ -1289,11 +1292,11 @@ def search_in_data_achievements(file_path):
         json_file = json.load(f)
     except json.JSONDecodeError as err:
         # error decoding json
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     except OSError as err:
         # error reading file
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     else:
         try:
@@ -1332,7 +1335,7 @@ def search_in_data_achievements(file_path):
 
 # The guild rewards data API provides a list of all guild rewards.
 def search_in_data_guild_rewards(file_path):
-    logging.info('search_in_data_guild_rewards(' + file_path + ')')
+    logging.debug('search_in_data_guild_rewards(' + file_path + ')')
     result = {'item_id': set(),
               'character': set(),
               'realm': set(),
@@ -1352,11 +1355,11 @@ def search_in_data_guild_rewards(file_path):
         json_file = json.load(f)
     except json.JSONDecodeError as err:
         # error decoding json
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     except OSError as err:
         # error reading file
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     else:
         try:
@@ -1369,7 +1372,7 @@ def search_in_data_guild_rewards(file_path):
 
 # The guild perks data API provides a list of all guild perks.
 def search_in_data_guild_perks(file_path):
-    logging.info('search_in_data_guild_perks(' + file_path + ')')
+    logging.debug('search_in_data_guild_perks(' + file_path + ')')
     result = {'item_id': set(),
               'character': set(),
               'realm': set(),
@@ -1389,11 +1392,11 @@ def search_in_data_guild_perks(file_path):
         json_file = json.load(f)
     except json.JSONDecodeError as err:
         # error decoding json
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     except OSError as err:
         # error reading file
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     else:
         try:
@@ -1410,7 +1413,7 @@ def search_in_data_guild_perks(file_path):
 # The guild achievements data API provides a list of all of the achievements
 # that guilds can earn as well as the category structure and hierarchy.
 def search_in_data_guild_achievements(file_path):
-    logging.info('search_in_data_guild_achievements(' + file_path + ')')
+    logging.debug('search_in_data_guild_achievements(' + file_path + ')')
     result = {'item_id': set(),
               'character': set(),
               'realm': set(),
@@ -1431,11 +1434,11 @@ def search_in_data_guild_achievements(file_path):
         json_file = json.load(f)
     except json.JSONDecodeError as err:
         # error decoding json
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     except OSError as err:
         # error reading file
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     else:
         try:
@@ -1457,7 +1460,7 @@ def search_in_data_guild_achievements(file_path):
 
 # The item classes data API provides a list of item classes
 def search_in_data_item_classes(file_path):
-    logging.info('search_in_data_item_classes(' + file_path + ')')
+    logging.debug('search_in_data_item_classes(' + file_path + ')')
     result = {'item_id': set(),
               'character': set(),
               'realm': set(),
@@ -1477,11 +1480,11 @@ def search_in_data_item_classes(file_path):
         json_file = json.load(f)
     except json.JSONDecodeError as err:
         # error decoding json
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     except OSError as err:
         # error reading file
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     else:
         # nothing ro return
@@ -1490,7 +1493,7 @@ def search_in_data_item_classes(file_path):
 
 # The talents data API provides a list of talents, specs and glyphs for each class.
 def search_in_data_talents(file_path):
-    logging.info('search_in_data_talents(' + file_path + ')')
+    logging.debug('search_in_data_talents(' + file_path + ')')
     result = {'item_id': set(),
               'character': set(),
               'realm': set(),
@@ -1510,11 +1513,11 @@ def search_in_data_talents(file_path):
         json_file = json.load(f)
     except json.JSONDecodeError as err:
         # error decoding json
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     except OSError as err:
         # error reading file
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     else:
         try:
@@ -1532,7 +1535,7 @@ def search_in_data_talents(file_path):
 
 # The different bat pet types (including what they are strong and weak against)
 def search_in_data_pet_types(file_path):
-    logging.info('search_in_data_pet_types(' + file_path + ')')
+    logging.debug('search_in_data_pet_types(' + file_path + ')')
     result = {'item_id': set(),
               'character': set(),
               'realm': set(),
@@ -1552,11 +1555,11 @@ def search_in_data_pet_types(file_path):
         json_file = json.load(f)
     except json.JSONDecodeError as err:
         # error decoding json
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     except OSError as err:
         # error reading file
-        logging.warning(err)
+        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
         return {}
     else:
         try:
