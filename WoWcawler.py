@@ -756,7 +756,7 @@ while True:
                         for item_set_id in queue['item_set_id']:
                             # Check if already downloaded
                             if not os.path.exists(os.path.join(PATH, str(item_set_id) + '.json')):
-                                item = WoWrapper.get_item_set(nation, locale, item_set_id)
+                                item = WoWrapper.get_item_set(nation, locale, str(item_set_id))
                                 if item[0] == 200:
                                     file = open(os.path.join(PATH, str(item_set_id) + '.json'), 'w')
                                     json.dump(item[1], file, sort_keys=True, indent=4)
