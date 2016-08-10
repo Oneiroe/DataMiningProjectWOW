@@ -34,8 +34,9 @@ location = {
 BRACKETS = ['2v2', '3v3', '5v5', 'rbg']
 
 ###############################################
-# TEST ZONE
+# TO-DO
 
+# TODO add a "ALREADY DONE" SET to take note of already done without storing them
 # TODO Updatable file or save some file with timestamp
 # TODO download again if file corrupted
 ###############################################
@@ -78,7 +79,7 @@ for nation in location:
                 # print("already exists")
                 pass
         except os.error as err:
-            logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+            logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
             pass
 
         # character (super group)
@@ -103,7 +104,7 @@ for nation in location:
                 # print("already exists")
                 pass
         except os.error as err:
-            logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+            logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
             pass
         # Classes
         try:
@@ -123,7 +124,7 @@ for nation in location:
                 # print("already exists")
                 pass
         except os.error as err:
-            logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+            logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
         # Achievements
         try:
             PATH = os.path.join(DATA_CHARACTER_PATH, 'achievements')
@@ -142,7 +143,7 @@ for nation in location:
                 # print("already exists")
                 pass
         except os.error as err:
-            logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+            logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
 
         # guild (super group)
         DATA_GUILD_PATH = os.path.join(DATA_PATH, 'guild')
@@ -166,7 +167,7 @@ for nation in location:
                 # print("already exists")
                 pass
         except os.error as err:
-            logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+            logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
         # Perks
         try:
             PATH = os.path.join(DATA_GUILD_PATH, 'perks')
@@ -185,7 +186,7 @@ for nation in location:
                 # print("already exists")
                 pass
         except os.error as err:
-            logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+            logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
         # Achievements
         try:
             PATH = os.path.join(DATA_GUILD_PATH, 'achievements')
@@ -204,7 +205,7 @@ for nation in location:
                 # print("already exists")
                 pass
         except os.error as err:
-            logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+            logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
 
         # Item
         try:
@@ -224,7 +225,7 @@ for nation in location:
                 # print("already exists")
                 pass
         except os.error as err:
-            logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+            logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
 
         # Talents
         try:
@@ -244,7 +245,7 @@ for nation in location:
                 # print("already exists")
                 pass
         except os.error as err:
-            logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+            logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
 
         # Pet types
         try:
@@ -264,7 +265,7 @@ for nation in location:
                 # print("already exists")
                 pass
         except os.error as err:
-            logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+            logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
 
 # DIRECT MASTERLISTS
 for nation in location:
@@ -295,7 +296,7 @@ for nation in location:
                 # print("already exists")
                 pass
         except os.error as err:
-            logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+            logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
 
         # Mount masterlist
         try:
@@ -315,7 +316,7 @@ for nation in location:
                 # print("already exists")
                 pass
         except os.error as err:
-            logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+            logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
 
         # Pet masterlist
         try:
@@ -335,7 +336,7 @@ for nation in location:
                 # print("already exists")
                 pass
         except os.error as err:
-            logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+            logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
 
         # Realm status (aka ALL realms and their status)
         # updatable
@@ -343,7 +344,7 @@ for nation in location:
             PATH = os.path.join(DB_LOCALE_PATH, 'realm')
             if not os.path.exists(PATH):
                 os.mkdir(PATH)
-            PATH = os.path.join(PATH,'status')
+            PATH = os.path.join(PATH, 'status')
             if not os.path.exists(PATH):
                 os.mkdir(PATH)
             if not os.path.exists(os.path.join(PATH, 'realm_status.json')):
@@ -359,7 +360,7 @@ for nation in location:
                 # print("already exists")
                 pass
         except os.error as err:
-            logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+            logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
 
         # Zone masterlist
         try:
@@ -379,7 +380,7 @@ for nation in location:
                 # print("already exists")
                 pass
         except os.error as err:
-            logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+            logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
 
         # Challenge region leaderboard
         # updatable
@@ -400,7 +401,7 @@ for nation in location:
                 # print("already exists")
                 pass
         except os.error as err:
-            logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+            logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
 
         # PVP leaderboard
         # updatable
@@ -422,7 +423,7 @@ for nation in location:
                     # print("already exists")
                     pass
         except os.error as err:
-            logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+            logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
 
 ############################################################
 # 1° LEVEL DATA: DEPENDANT OF ONE PREVIOUSLY RETRIEVE INFO #
@@ -455,7 +456,7 @@ while True:
         # for each item in each folder of DB
         try:
             for dirname, dirnames, filenames in os.walk(DB_BASE_PATH):
-                logging.info('SEARCHING IN: '+dirname)
+                logging.info('SEARCHING IN: ' + dirname)
                 for filename in filenames:
                     logging.debug(os.path.join(dirname, filename))
                     try:
@@ -691,11 +692,11 @@ while True:
                                         except KeyError:
                                             pass
                     except os.error as err:
-                        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+                        logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
                         logging.exception(sys.last_traceback.tb_lineno)
                         pass
         except os.error as err:
-            logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+            logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
             logging.exception(sys.last_traceback.tb_lineno)
             pass
 
@@ -713,7 +714,7 @@ while True:
                     os.mkdir(DB_LOCALE_PATH)
                 for locale in location[nation]:
                     # print(nation + ' ' + locale)
-                    logging.info('DOWNLOADING FROM: '+nation+'-'+locale)
+                    logging.info('DOWNLOADING FROM: ' + nation + '-' + locale)
                     DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, nation, locale)
                     if not os.path.exists(DB_LOCALE_PATH):
                         os.mkdir(DB_LOCALE_PATH)
@@ -744,7 +745,7 @@ while True:
                     except KeyError:
                         pass
                     except os.error as err:
-                        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+                        logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
                         pass
 
                     try:
@@ -770,7 +771,7 @@ while True:
                     except KeyError:
                         pass
                     except os.error as err:
-                        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+                        logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
                         pass
 
                     try:
@@ -783,11 +784,13 @@ while True:
                             try:
                                 # Check if already downloaded
                                 character_name, realm = character.split(',')
-                                if not os.path.exists(os.path.join(PATH, str(character_name) + '[' + str(realm) + ']' + '.json')):
+                                if not os.path.exists(
+                                        os.path.join(PATH, str(character_name) + '[' + str(realm) + ']' + '.json')):
                                     item = WoWrapper.get_character_full(nation, locale, str(realm), str(character_name))
                                     if item[0] == 200:
-                                        file = open(os.path.join(PATH, str(character_name) + '[' + str(realm) + ']' + '.json'),
-                                                    'w')
+                                        file = open(
+                                            os.path.join(PATH, str(character_name) + '[' + str(realm) + ']' + '.json'),
+                                            'w')
                                         json.dump(item[1], file, sort_keys=True, indent=4)
                                         file.close()
                                     else:
@@ -797,11 +800,11 @@ while True:
                                     # print("already exists")
                                     pass
                             except IndexError as err:
-                                logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+                                logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
                     except KeyError:
                         pass
                     except os.error as err:
-                        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+                        logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
                         pass
 
                     try:
@@ -814,10 +817,12 @@ while True:
                             try:
                                 # Check if already downloaded
                                 guild_name, realm = guild.split(',')
-                                if not os.path.exists(os.path.join(PATH, str(guild_name) + '[' + str(realm) + ']' + '.json')):
+                                if not os.path.exists(
+                                        os.path.join(PATH, str(guild_name) + '[' + str(realm) + ']' + '.json')):
                                     item = WoWrapper.get_guild_full(nation, locale, str(realm), str(guild_name))
                                     if item[0] == 200:
-                                        file = open(os.path.join(PATH, str(guild_name) + '[' + str(realm) + ']' + '.json'), 'w')
+                                        file = open(
+                                            os.path.join(PATH, str(guild_name) + '[' + str(realm) + ']' + '.json'), 'w')
                                         json.dump(item[1], file, sort_keys=True, indent=4)
                                         file.close()
                                     else:
@@ -827,11 +832,11 @@ while True:
                                     # print("already exists")
                                     pass
                             except IndexError as err:
-                                logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+                                logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
                     except KeyError:
                         pass
                     except os.error as err:
-                        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+                        logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
                         pass
 
                     try:
@@ -857,7 +862,7 @@ while True:
                     except KeyError:
                         pass
                     except os.error as err:
-                        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+                        logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
                         pass
 
                     try:
@@ -883,7 +888,7 @@ while True:
                     except KeyError:
                         pass
                     except os.error as err:
-                        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+                        logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
                         pass
 
                     try:
@@ -909,7 +914,7 @@ while True:
                     except KeyError:
                         pass
                     except os.error as err:
-                        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+                        logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
                         pass
 
                     try:
@@ -935,7 +940,7 @@ while True:
                     except KeyError:
                         pass
                     except os.error as err:
-                        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+                        logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
                         pass
 
                     try:
@@ -961,7 +966,7 @@ while True:
                     except KeyError:
                         pass
                     except os.error as err:
-                        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+                        logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
                         pass
 
                     try:
@@ -987,7 +992,7 @@ while True:
                     except KeyError:
                         pass
                     except os.error as err:
-                        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+                        logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
                         pass
 
                     try:
@@ -1013,7 +1018,7 @@ while True:
                     except KeyError:
                         pass
                     except os.error as err:
-                        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+                        logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
                         pass
 
                     try:
@@ -1039,15 +1044,15 @@ while True:
                     except KeyError:
                         pass
                     except os.error as err:
-                        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+                        logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
                         pass
 
         except os.error as err:
-            logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+            logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
             pass
 
         logging.info('END DOWNLOADER')
 
     except Exception as err:  # Just to be sure that it will run forever
-        logging.warning(str(err)+' -- line: '+str(sys.exc_info()[-1].tb_lineno))
+        logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
         pass
