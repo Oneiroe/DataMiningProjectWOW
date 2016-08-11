@@ -18,7 +18,7 @@ DB_BASE_PATH = os.path.join(os.getcwd(), 'DB', 'WOW')
 print('Start Controller')
 
 # START CRAWLER and GET PID
-pid = subprocess.Popen('python3 WoWcawler.py').pid
+pid = subprocess.Popen('python3 WoWcawler.py', shell=True).pid
 # os.system("nohup python3 WoWcawler.py &")
 if not psutil.pid_exists(pid):
     print('PID doesn\'t exists')

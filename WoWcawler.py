@@ -10,7 +10,7 @@ import sys
 
 ####
 # LOG setup
-logging.basicConfig(filename=os.path.join(os.getcwd(), 'LOG', 'DEBUG.log'),
+logging.basicConfig(filename=os.path.join(os.getcwd(), 'LOG', 'INFO.log'),
                     level=logging.INFO,
                     format='%(asctime)-15s '
                            '%(levelname)s '
