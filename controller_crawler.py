@@ -26,7 +26,7 @@ if not psutil.pid_exists(pid):
 
 print('Launched WoWcawler.py --> PID: ' + str(pid))
 
-process = psutil.Process(pid)
+process = psutil.Process(pid) + 1
 
 # ANALYSE SPACE LEFT
 while process.status() == 'running':
@@ -50,21 +50,20 @@ while process.status() == 'running':
         time.sleep(60)
 
     print('Freeing space...')
-    while psutil.disk_usage('.')[-1] > 20:
-        # Truncate DB file content
-        try:
-            for dirname, dirnames, filenames in os.walk(DB_BASE_PATH):
-                for filename in filenames:
-                    try:
-                        if filename.endswith('.json'):
-                            file_path = os.path.join(dirname, filename)
-                            os.truncate(file_path, 0)
-                    except os.error as err:
-                        print(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
-        except os.error as err:
-            print(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
-            time.sleep(60)
-            continue
+    # Truncate DB file content
+    try:
+        for dirname, dirnames, filenames in os.walk(DB_BASE_PATH):
+            for filename in filenames:
+                try:
+                    if filename.endswith('.json'):
+                        file_path = os.path.join(dirname, filename)
+                        os.truncate(file_path, 0)
+                except os.error as err:
+                    print(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+    except os.error as err:
+        print(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+        time.sleep(60)
+        continue
     print('...DONE --> usage: ' + str(psutil.disk_usage('.')[-1]))
 
     # Resume the process
