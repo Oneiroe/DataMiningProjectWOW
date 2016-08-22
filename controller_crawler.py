@@ -26,7 +26,7 @@ if not psutil.pid_exists(pid):
 
 print('Launched WoWcawler.py --> PID: ' + str(pid))
 
-process = psutil.Process(pid) + 1
+process = psutil.Process(pid+1)
 
 # ANALYSE SPACE LEFT
 while process.status() == 'running':
