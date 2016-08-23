@@ -362,15 +362,16 @@ for nation in location:
             if not os.path.exists(PATH):
                 os.mkdir(PATH)
             for bracket in BRACKETS:
-                # if not os.path.exists(os.path.join(PATH, bracket + '.json')):
-                pvp_leaderboard = WoWrapper.get_pvp_leaderboard(nation, locale, bracket)
-                if pvp_leaderboard[0] == 200:
-                    file = open(os.path.join(PATH, bracket + '.json'), 'w')
-                    json.dump(pvp_leaderboard[1], file, sort_keys=True, indent=4)
-                    file.close()
-                else:
-                    # print(pvp_leaderboard[0])
-                    pass
+                if not os.path.exists(os.path.join(PATH, bracket + '.json')) or not os.stat(
+                        os.path.join(PATH, bracket + '.json')).st_size == 0:
+                    pvp_leaderboard = WoWrapper.get_pvp_leaderboard(nation, locale, bracket)
+                    if pvp_leaderboard[0] == 200:
+                        file = open(os.path.join(PATH, bracket + '.json'), 'w')
+                        json.dump(pvp_leaderboard[1], file, sort_keys=True, indent=4)
+                        file.close()
+                    else:
+                        # print(pvp_leaderboard[0])
+                        pass
         except os.error as err:
             logging.warning(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
 
