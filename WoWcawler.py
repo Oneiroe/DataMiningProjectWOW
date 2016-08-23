@@ -464,6 +464,9 @@ while True:
                             file_path = os.path.join(dirname, filename)
                             # Choose the right function to analyze the file and
                             # put retrieved keys in QUEUE
+                            if os.stat(file_path).st_size == 0:
+                                # skip empty files
+                                continue
                             if dirname.endswith(os.path.join('data', 'battlegroups')):
                                 res = WoWspider.search_in_data_battlegroups(file_path)
                                 for key in res.keys():
