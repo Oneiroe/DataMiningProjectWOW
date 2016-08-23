@@ -362,7 +362,7 @@ for nation in location:
             if not os.path.exists(PATH):
                 os.mkdir(PATH)
             for bracket in BRACKETS:
-                if not os.path.exists(os.path.join(PATH, bracket + '.json')) or not os.stat(
+                if not os.path.exists(os.path.join(PATH, bracket + '.json')) or os.stat(
                         os.path.join(PATH, bracket + '.json')).st_size == 0:
                     pvp_leaderboard = WoWrapper.get_pvp_leaderboard(nation, locale, bracket)
                     if pvp_leaderboard[0] == 200:
