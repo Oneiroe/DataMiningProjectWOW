@@ -18,8 +18,7 @@ DB_BASE_PATH = os.path.join(os.getcwd(), 'DB', 'WOW')
 print('Start Controller')
 
 # START CRAWLER and GET PID
-pid = subprocess.Popen('python3 WoWcawler.py', shell=True).pid
-# os.system("nohup python3 WoWcawler.py &")
+pid = subprocess.Popen(args=['python3', 'WoWcawler.py']).pid
 if not psutil.pid_exists(pid):
     print('PID doesn\'t exists')
     exit()
@@ -29,13 +28,13 @@ print('Launched WoWcawler.py --> PID: ' + str(pid))
 process = psutil.Process(pid)
 
 # ANALYSE SPACE LEFT
-while process.status() == 'running':
+while process.status() != 'zombie':
     # Do nothing until memory is full at 95%
-    while psutil.disk_usage('.')[-1] < 90:  # percent occupied space
+    while psutil.disk_usage('.')[-1] < 95:  # percent occupied space
         time.sleep(60)
         continue
 
-    print('Memory load > 90% --> ' + str(psutil.disk_usage('.')[-1]))
+    print('Memory load > 95% --> ' + str(psutil.disk_usage('.')[-1]))
 
     # Suspend the process and wait till free memory is restored
     process.suspend()
@@ -53,6 +52,10 @@ while process.status() == 'running':
     # Truncate DB file content
     try:
         for dirname, dirnames, filenames in os.walk(DB_BASE_PATH):
+            if dirname.__contains__('data'):
+                #  leave "data" files
+                continue
+            print(dirname)
             for filename in filenames:
                 try:
                     if filename.endswith('.json'):
@@ -63,7 +66,6 @@ while process.status() == 'running':
     except os.error as err:
         print(str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
         time.sleep(60)
-        continue
     print('...DONE --> usage: ' + str(psutil.disk_usage('.')[-1]))
 
     # Resume the process
