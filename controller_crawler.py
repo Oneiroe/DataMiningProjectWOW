@@ -55,7 +55,6 @@ while process.status() != 'zombie':
             if dirname.__contains__('data'):
                 #  leave "data" files
                 continue
-            print(dirname)
             for filename in filenames:
                 try:
                     if filename.endswith('.json'):
@@ -71,3 +70,6 @@ while process.status() != 'zombie':
     # Resume the process
     process.resume()
     print('Process resumed')
+
+print('COMPLETE')
+print('Stop Controller')
