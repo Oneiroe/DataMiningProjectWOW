@@ -68,7 +68,6 @@ def number_of_players_retrieved_total() -> int:
 
     result = 0
     for nation in location:
-        DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, nation)
         for locale in location[nation]:
             DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, nation, locale)
             CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
@@ -82,7 +81,6 @@ def number_of_distinct_players_retrieved_total() -> int:
 
     result_set = set()
     for nation in location:
-        DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, nation)
         for locale in location[nation]:
             DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, nation, locale)
             CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
@@ -104,6 +102,25 @@ def number_of_players_retrieved_per_nation() -> dict:
             DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, nation, locale)
             CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
             result[nation] += len(os.listdir(CHARACTER_PATH))
+    return result
+
+
+def number_of_distinct_players_retrieved_per_nation() -> dict:
+    """ Returns the number of distinct players retrieved from each nation from the API
+
+    Returns:
+        dict: key is the nation, value the number of respective distinct players retrieved
+    """
+    logging.debug('number_of_distinct_players_retrieved_per_nation()')
+
+    result = {'EU': set(), 'KR': set(), 'TW': set(), 'US': set()}
+    for nation in location:
+        for locale in location[nation]:
+            DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, nation, locale)
+            CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
+            result[nation].update(set(os.listdir(CHARACTER_PATH)))
+    for nation in result:
+        result[nation] = len(result[nation])
     return result
 
 
@@ -135,6 +152,3 @@ def players_locale_intersections(nation_1: str, locale_1: str, nation_2: str, lo
     player_set_2 = set(os.listdir(DB_CHARACTER_LOCALE_2_PATH))
 
     return player_set_1.intersection(player_set_2)
-
-print(number_of_distinct_players_retrieved_total())
-print(number_of_players_retrieved_per_nation())
