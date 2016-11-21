@@ -23,11 +23,12 @@ logging.basicConfig(filename=os.path.join(os.getcwd(), 'LOG', 'INFO.log'),
 DB_BASE_PATH = os.path.join(os.getcwd(), 'DB', 'WOW')
 
 location = {
-    # 'EU': ['en_GB', 'de_DE', 'es_ES', 'fr_FR', 'it_IT', 'pl_PL', 'pt_PT', 'ru_RU'],
-    'EU': ['en_GB', 'de_DE', 'es_ES', 'fr_FR', 'it_IT', 'pt_PT', 'ru_RU'],
+    # 'EU': ['en_GB', 'de_DE', 'es_ES', 'fr_FR', 'it_IT', 'pt_PT', 'ru_RU'],
+    'EU': ['en_GB'],
     'KR': ['ko_KR'],
     'TW': ['zh_TW'],
-    'US': ['en_US', 'pt_BR', 'es_MX']
+    # 'US': ['en_US', 'pt_BR', 'es_MX']
+    'US': ['en_US']
 }  # static map with available servers and relative nations
 # continent: EU, KR, TW, US
 
