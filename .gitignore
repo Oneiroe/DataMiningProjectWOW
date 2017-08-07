@@ -10,6 +10,9 @@
 # Json DB
 /DB/WOW/
 
+# Analitical results and support files
+/Analysis/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
