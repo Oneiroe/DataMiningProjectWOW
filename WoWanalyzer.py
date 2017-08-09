@@ -8,6 +8,7 @@ import os
 import logging
 import sys
 import csv
+from tqdm import tqdm
 
 ####
 # LOG setup
@@ -60,10 +61,53 @@ I'd go with a, b, and something along e, which is not yet clear, but can lead to
     is it actually true or in the end every player tends to converge to the same similar characters?
 """
 
+
 #
 ###############################################
 
-logging.info('START analyzer')
+
+def one_pass_locale(nation, locale):
+    """ Retrieve all the information required with a single scan of the DB for the given locale"""
+    logging.info('one_pass_locale(' + nation + ', ' + locale + ')')
+    result = {
+        'number_players': 0,
+        'number_distinct_players': 0,
+        'ranking': []
+    }
+    # PATHs
+    DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, nation, locale)
+    CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
+
+    # immediate
+    result['number_players'] = len(os.listdir(CHARACTER_PATH))
+    result['number_distinct_players'] = len(set(os.listdir(CHARACTER_PATH)))
+
+    ### SCANS
+    # Characters
+    with tqdm(total=len(os.listdir(CHARACTER_PATH))) as pbar:
+        for file in os.listdir(CHARACTER_PATH):
+            pbar.update(1)
+            if not file.endswith('.json'):
+                continue
+            with open(os.path.join(CHARACTER_PATH, file)) as character_file:
+                try:
+                    character_json = json.load(character_file)
+                    try:
+                        # INFO RETRIEVAL HERE
+                        # RANKING
+
+
+                        pass
+                    except KeyError as err:
+                        logging.warning('KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                        logging.warning(str(os.path.join(CHARACTER_PATH, file)))
+                except json.decoder.JSONDecodeError as err:
+                    # Probable incomplete or wrongly downloaded data, retry
+                    logging.warning('JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                    logging.warning(str(os.path.join(CHARACTER_PATH, file)))
+                    continue
+
+    return result
 
 
 def number_of_players_retrieved_total() -> int:
@@ -274,55 +318,68 @@ def clean_json_dataset():
     return tot_operations
 
 
+# TODO
+def clean_duplicates():
+    """ Move to special folders duplicates entries, leaving the more useful (ie. containing more info) """
+    pass
+
+
+# TODO separe functions in RETRIEVE/GENERATE and GET :
+#   the former scan the DB and create a file with the interested data, the latter just scan that file
+
 def ranking(nation, locale, max_num=100):
     """ Return a list of max_num player from the given locale sorted by ranking in decreasing order """
     logging.debug('ranking(' + nation + ', ' + locale + ', ' + str(max_num) + ')')
 
-    # TODO create a function that create a file with the leaderboard. then this function just scan that file
-
-
-    leaderboard = list()
+    leaderboard = [['', 0]]
     DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, nation, locale)
     CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
-    smallest = 0
-    for file in os.listdir(CHARACTER_PATH):
-        # print(file)
-        if not file.endswith('.json'):
-            continue
-        with open(os.path.join(CHARACTER_PATH, file)) as character_file:
-            try:
-                character_json = json.load(character_file)
-                try:
-                    if character_json['achievementPoints'] > smallest or len(leaderboard) < max_num:
-                        i = 0
-                        for character, score in leaderboard:
-                            if score > character_json['achievementPoints']:
-                                i += 1
-                            break
-                        leaderboard = \
-                            leaderboard[0:i] + \
-                            [(character_json['name'], character_json['achievementPoints'])] + \
-                            leaderboard[i:100]
-                        smallest = leaderboard[-1][1]
-                except KeyError as err:
-                    logging.warning('KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
-                    logging.warning(str(os.path.join(CHARACTER_PATH, file)))
-            except json.decoder.JSONDecodeError as err:
-                # Probable incomplete or wrongly downloaded data, retry
-                logging.warning('JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
-                logging.warning(str(os.path.join(CHARACTER_PATH, file)))
-                continue
 
+    # Progressbar in terminal
+    with tqdm(total=len(os.listdir(CHARACTER_PATH))) as pbar:
+        for file in os.listdir(CHARACTER_PATH):
+            pbar.update(1)
+            if not file.endswith('.json'):
+                continue
+            with open(os.path.join(CHARACTER_PATH, file)) as character_file:
+                try:
+                    character_json = json.load(character_file)
+                    try:
+                        if character_json['achievementPoints'] > leaderboard[-1][1] or len(leaderboard) < max_num:
+                            # INSERTION SORT (linear)
+                            i = 0
+                            for character, score in leaderboard:
+                                if character_json['achievementPoints'] > score:
+                                    break
+                                else:
+                                    i += 1
+                            leaderboard = \
+                                leaderboard[0:i] + \
+                                [(character_json['name'], character_json['achievementPoints'])] + \
+                                leaderboard[i:100]
+                    except KeyError as err:
+                        logging.warning('KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                        logging.warning(str(os.path.join(CHARACTER_PATH, file)))
+                except json.decoder.JSONDecodeError as err:
+                    # Probable incomplete or wrongly downloaded data, retry
+                    logging.warning('JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                    logging.warning(str(os.path.join(CHARACTER_PATH, file)))
+                    continue
+    print(leaderboard)
     # output to csv file
     with open(os.path.join(os.getcwd(), 'Analysis',
-                           'players_leaderboard_' + nation + '_' + locale + '_TOP' + max_num + '.csv'),
+                           'players_leaderboard_' + nation + '_' + locale + '_TOP' + str(max_num) + '.csv'),
               'w',
-              newline='') as output:
+              newline='',
+              encoding='utf-8') as output:
         writer = csv.writer(output)
         for character, score in leaderboard:
             writer.writerow([character, score])
 
     return leaderboard
+
+
+logging.info('START analyzer')
 
 
 def main():
