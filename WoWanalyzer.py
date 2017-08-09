@@ -9,7 +9,9 @@ import logging
 import sys
 import csv
 from tqdm import tqdm
+from collections import Counter
 
+###############################################
 ####
 # LOG setup
 logging.basicConfig(filename=os.path.join(os.getcwd(), 'LOG', 'analyzer_DEBUG.log'),
@@ -43,7 +45,7 @@ I'd go with a, b, and something along e, which is not yet clear, but can lead to
 
     a) Preliminary general simple statistical studies per server/nation (to acquire data and get confident with the API) like
             - number of players,
-            - players ranking,
+            - players characters_ranking,
             - most frequent character genre/sex/class,
             - distribution of character wrt their level,
             - most used characters,
@@ -65,6 +67,106 @@ I'd go with a, b, and something along e, which is not yet clear, but can lead to
 #
 ###############################################
 
+###############################################
+# DATASET CLEANING
+def clean_characters_dataset(nation, locale):
+    """ move to a special folder all the corrupted or empty json files for the given nation"""
+    logging.debug('clean_characters_dataset(' + nation + ', ' + locale + ')')
+    result_list = []
+    DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, nation, locale)
+    CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
+    TRASH_PATH = os.path.join(CHARACTER_PATH, TRASH_PATH_SUFFIX)
+    if not os.path.exists(TRASH_PATH):
+        os.mkdir(TRASH_PATH)
+    for file in os.listdir(CHARACTER_PATH):
+        if not file.endswith('.json'):
+            continue
+        with open(os.path.join(CHARACTER_PATH, file)) as character_file:
+            try:
+                character_json = json.load(character_file)
+                try:
+                    if len(character_json.keys()) == 0:
+                        result_list.append(str(os.path.join(CHARACTER_PATH, file)))
+                        # character_json['achievementPoints']
+                except KeyError as err:
+                    logging.warning('KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                    result_list.append(str(os.path.join(CHARACTER_PATH, file)))
+            except json.decoder.JSONDecodeError as err:
+                # logging.warning(str(os.path.join(CHARACTER_PATH, file)))
+                logging.warning('JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                result_list.append(str(os.path.join(CHARACTER_PATH, file)))
+                continue
+
+    for file in result_list:
+        if not os.path.exists(os.path.join(TRASH_PATH, os.path.basename(file))):
+            os.rename(file, os.path.join(TRASH_PATH, os.path.basename(file)))
+
+    return len(result_list)
+
+
+def clean_json_dataset():
+    """ move to a special folders all the corrupted or empty json files for the dataset"""
+    logging.debug('clean_json_dataset()')
+    tot_operations = 0
+
+    for root, subFolders, files in os.walk(DB_BASE_PATH):
+        logging.debug(root)
+        if TRASH_PATH_SUFFIX in root:
+            continue
+        TRASH_PATH = os.path.join(root, TRASH_PATH_SUFFIX)
+        for file in files:
+            if not file.endswith('.json'):
+                continue
+            with open(os.path.join(root, file)) as open_file:
+                try:
+                    json_file = json.load(open_file)
+                    try:
+                        if len(json_file.keys()) == 0:
+                            if not os.path.exists(TRASH_PATH):
+                                os.mkdir(TRASH_PATH)
+                            open_file.close()
+                            if not os.path.exists(os.path.join(TRASH_PATH, file)):
+                                os.rename(os.path.join(root, file), os.path.join(TRASH_PATH, file))
+                            else:
+                                os.remove(os.path.join(root, file))
+                            tot_operations += 1
+
+                    except KeyError as err:
+                        logging.warning('KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                        if not os.path.exists(TRASH_PATH):
+                            os.mkdir(TRASH_PATH)
+                        open_file.close()
+                        if not os.path.exists(os.path.join(TRASH_PATH, file)):
+                            os.rename(os.path.join(root, file), os.path.join(TRASH_PATH, file))
+                        else:
+                            os.remove(os.path.join(root, file))
+                        tot_operations += 1
+                except json.decoder.JSONDecodeError as err:
+                    logging.warning('JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                    if not os.path.exists(TRASH_PATH):
+                        os.mkdir(TRASH_PATH)
+                    open_file.close()
+                    if not os.path.exists(os.path.join(TRASH_PATH, file)):
+                        os.rename(os.path.join(root, file), os.path.join(TRASH_PATH, file))
+                    else:
+                        os.remove(os.path.join(root, file))
+                    tot_operations += 1
+
+    return tot_operations
+
+
+# TODO
+def clean_duplicates():
+    """ Move to special folders duplicates entries, leaving the more useful (ie. containing more info) """
+    pass
+
+
+###############################################
+# STATS
+##############
+# TODO separe functions in RETRIEVE/GENERATE and GET :
+#   the former scan the DB and create a file with the interested data, the latter just scan that file
+##############
 
 def one_pass_locale(nation, locale):
     """ Retrieve all the information required with a single scan of the DB for the given locale"""
@@ -72,7 +174,7 @@ def one_pass_locale(nation, locale):
     result = {
         'number_players': 0,
         'number_distinct_players': 0,
-        'ranking': []
+        'characters_ranking': []
     }
     # PATHs
     DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, nation, locale)
@@ -232,104 +334,9 @@ def players_locales_intersections(locales_iterator) -> set:
     return intersection
 
 
-def clean_characters_dataset(nation, locale):
-    """ move to a special folder all the corrupted or empty json files for the given nation"""
-    logging.debug('clean_characters_dataset(' + nation + ', ' + locale + ')')
-    result_list = []
-    DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, nation, locale)
-    CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
-    TRASH_PATH = os.path.join(CHARACTER_PATH, TRASH_PATH_SUFFIX)
-    if not os.path.exists(TRASH_PATH):
-        os.mkdir(TRASH_PATH)
-    for file in os.listdir(CHARACTER_PATH):
-        if not file.endswith('.json'):
-            continue
-        with open(os.path.join(CHARACTER_PATH, file)) as character_file:
-            try:
-                character_json = json.load(character_file)
-                try:
-                    if len(character_json.keys()) == 0:
-                        result_list.append(str(os.path.join(CHARACTER_PATH, file)))
-                        # character_json['achievementPoints']
-                except KeyError as err:
-                    logging.warning('KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
-                    result_list.append(str(os.path.join(CHARACTER_PATH, file)))
-            except json.decoder.JSONDecodeError as err:
-                # logging.warning(str(os.path.join(CHARACTER_PATH, file)))
-                logging.warning('JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
-                result_list.append(str(os.path.join(CHARACTER_PATH, file)))
-                continue
-
-    for file in result_list:
-        if not os.path.exists(os.path.join(TRASH_PATH, os.path.basename(file))):
-            os.rename(file, os.path.join(TRASH_PATH, os.path.basename(file)))
-
-    return len(result_list)
-
-
-def clean_json_dataset():
-    """ move to a special folders all the corrupted or empty json files for the dataset"""
-    logging.debug('clean_json_dataset()')
-    tot_operations = 0
-
-    for root, subFolders, files in os.walk(DB_BASE_PATH):
-        logging.debug(root)
-        if TRASH_PATH_SUFFIX in root:
-            continue
-        TRASH_PATH = os.path.join(root, TRASH_PATH_SUFFIX)
-        for file in files:
-            if not file.endswith('.json'):
-                continue
-            with open(os.path.join(root, file)) as open_file:
-                try:
-                    json_file = json.load(open_file)
-                    try:
-                        if len(json_file.keys()) == 0:
-                            if not os.path.exists(TRASH_PATH):
-                                os.mkdir(TRASH_PATH)
-                            open_file.close()
-                            if not os.path.exists(os.path.join(TRASH_PATH, file)):
-                                os.rename(os.path.join(root, file), os.path.join(TRASH_PATH, file))
-                            else:
-                                os.remove(os.path.join(root, file))
-                            tot_operations += 1
-
-                    except KeyError as err:
-                        logging.warning('KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
-                        if not os.path.exists(TRASH_PATH):
-                            os.mkdir(TRASH_PATH)
-                        open_file.close()
-                        if not os.path.exists(os.path.join(TRASH_PATH, file)):
-                            os.rename(os.path.join(root, file), os.path.join(TRASH_PATH, file))
-                        else:
-                            os.remove(os.path.join(root, file))
-                        tot_operations += 1
-                except json.decoder.JSONDecodeError as err:
-                    logging.warning('JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
-                    if not os.path.exists(TRASH_PATH):
-                        os.mkdir(TRASH_PATH)
-                    open_file.close()
-                    if not os.path.exists(os.path.join(TRASH_PATH, file)):
-                        os.rename(os.path.join(root, file), os.path.join(TRASH_PATH, file))
-                    else:
-                        os.remove(os.path.join(root, file))
-                    tot_operations += 1
-
-    return tot_operations
-
-
-# TODO
-def clean_duplicates():
-    """ Move to special folders duplicates entries, leaving the more useful (ie. containing more info) """
-    pass
-
-
-# TODO separe functions in RETRIEVE/GENERATE and GET :
-#   the former scan the DB and create a file with the interested data, the latter just scan that file
-
-def ranking(nation, locale, max_num=100):
-    """ Return a list of max_num player from the given locale sorted by ranking in decreasing order """
-    logging.debug('ranking(' + nation + ', ' + locale + ', ' + str(max_num) + ')')
+def characters_ranking(nation, locale, max_num=100):
+    """ Return a list of max_num players from the given locale sorted by characters_ranking in decreasing order """
+    logging.debug('characters_ranking(' + nation + ', ' + locale + ', ' + str(max_num) + ')')
 
     leaderboard = [['', 0]]
     DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, nation, locale)
@@ -365,7 +372,7 @@ def ranking(nation, locale, max_num=100):
                     logging.warning('JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
                     logging.warning(str(os.path.join(CHARACTER_PATH, file)))
                     continue
-    print(leaderboard)
+    # print(leaderboard)
     # output to csv file
     with open(os.path.join(os.getcwd(), 'Analysis',
                            'players_leaderboard_' + nation + '_' + locale + '_TOP' + str(max_num) + '.csv'),
@@ -379,6 +386,162 @@ def ranking(nation, locale, max_num=100):
     return leaderboard
 
 
+def gender_ranking(nation, locale):
+    """ Return the numbers of male and female characters for the given locale """
+    logging.debug('gender_ranking(' + nation + ', ' + locale + ')')
+
+    result = Counter({1: 0, 0: 0})
+    DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, nation, locale)
+    CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
+
+    # Progressbar in terminal
+    with tqdm(total=len(os.listdir(CHARACTER_PATH))) as pbar:
+        for file in os.listdir(CHARACTER_PATH):
+            pbar.update(1)
+            if not file.endswith('.json'):
+                continue
+            with open(os.path.join(CHARACTER_PATH, file)) as character_file:
+                try:
+                    character_json = json.load(character_file)
+                    try:
+                        result[character_json['gender']] += 1
+                    except KeyError as err:
+                        logging.warning('KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                        logging.warning(str(os.path.join(CHARACTER_PATH, file)))
+                except json.decoder.JSONDecodeError as err:
+                    # Probable incomplete or wrongly downloaded data, retry
+                    logging.warning('JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                    logging.warning(str(os.path.join(CHARACTER_PATH, file)))
+                    continue
+    print(result)
+    # output to csv file
+    with open(os.path.join(os.getcwd(), 'Analysis',
+                           'gender_ranking_' + nation + '_' + locale + '.csv'),
+              'w',
+              newline='',
+              encoding='utf-8') as output:
+        writer = csv.writer(output)
+        for gender in result:
+            writer.writerow([gender, result[gender]])
+
+    return result
+
+
+def race_ranking(nation, locale):
+    """ Return the numbers of characters per race for the given locale """
+    logging.debug('race_ranking(' + nation + ', ' + locale + ')')
+
+    DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, nation, locale)
+    CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
+    RACES_PATH = os.path.join(DB_LOCALE_PATH, 'data', 'character', 'races')
+
+    result = Counter()
+    # Find all races
+    with open(os.path.join(RACES_PATH, 'races.json')) as races_file:
+        try:
+            races_json = json.load(races_file)
+            try:
+                for race in races_json['races']:
+                    result[race['id']] = 0
+            except KeyError as err:
+                logging.warning('KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                logging.warning(str(os.path.join(RACES_PATH, 'races.json')))
+        except json.decoder.JSONDecodeError as err:
+            # Probable incomplete or wrongly downloaded data, retry
+            logging.warning('JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+            logging.warning(str(os.path.join(RACES_PATH, 'races.json')))
+
+    # Progressbar in terminal
+    with tqdm(total=len(os.listdir(CHARACTER_PATH))) as pbar:
+        for file in os.listdir(CHARACTER_PATH):
+            pbar.update(1)
+            if not file.endswith('.json'):
+                continue
+            with open(os.path.join(CHARACTER_PATH, file)) as character_file:
+                try:
+                    character_json = json.load(character_file)
+                    try:
+                        result[character_json['race']] += 1
+                    except KeyError as err:
+                        logging.warning('KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                        logging.warning(str(os.path.join(CHARACTER_PATH, file)))
+                except json.decoder.JSONDecodeError as err:
+                    # Probable incomplete or wrongly downloaded data, retry
+                    logging.warning('JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                    logging.warning(str(os.path.join(CHARACTER_PATH, file)))
+                    continue
+    print(result)
+    # output to csv file
+    with open(os.path.join(os.getcwd(), 'Analysis',
+                           'race_ranking_' + nation + '_' + locale + '.csv'),
+              'w',
+              newline='',
+              encoding='utf-8') as output:
+        writer = csv.writer(output)
+        for race in result:
+            writer.writerow([race, result[race]])
+
+    return result
+
+
+def class_ranking(nation, locale):
+    """ Return the numbers of characters per class for the given locale """
+    logging.debug('class_ranking(' + nation + ', ' + locale + ')')
+
+    DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, nation, locale)
+    CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
+    CLASS_PATH = os.path.join(DB_LOCALE_PATH, 'data', 'character', 'classes')
+
+    result = Counter()
+    # Find all classes
+    with open(os.path.join(CLASS_PATH, 'classes.json')) as classes_file:
+        try:
+            classes_json = json.load(classes_file)
+            try:
+                for character_class in classes_json['classes']:
+                    result[character_class['id']] = 0
+            except KeyError as err:
+                logging.warning('KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                logging.warning(str(os.path.join(CLASS_PATH, 'classes.json')))
+        except json.decoder.JSONDecodeError as err:
+            # Probable incomplete or wrongly downloaded data, retry
+            logging.warning('JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+            logging.warning(str(os.path.join(CLASS_PATH, 'classes.json')))
+
+    # Progressbar in terminal
+    with tqdm(total=len(os.listdir(CHARACTER_PATH))) as pbar:
+        for file in os.listdir(CHARACTER_PATH):
+            pbar.update(1)
+            if not file.endswith('.json'):
+                continue
+            with open(os.path.join(CHARACTER_PATH, file)) as character_file:
+                try:
+                    character_json = json.load(character_file)
+                    try:
+                        result[character_json['class']] += 1
+                    except KeyError as err:
+                        logging.warning('KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                        logging.warning(str(os.path.join(CHARACTER_PATH, file)))
+                except json.decoder.JSONDecodeError as err:
+                    # Probable incomplete or wrongly downloaded data, retry
+                    logging.warning('JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                    logging.warning(str(os.path.join(CHARACTER_PATH, file)))
+                    continue
+    print(result)
+    # output to csv file
+    with open(os.path.join(os.getcwd(), 'Analysis',
+                           'class_ranking_' + nation + '_' + locale + '.csv'),
+              'w',
+              newline='',
+              encoding='utf-8') as output:
+        writer = csv.writer(output)
+        for character_class in result:
+            writer.writerow([character_class, result[character_class]])
+
+    return result
+
+
+###############################################
 logging.info('START analyzer')
 
 
@@ -410,7 +573,10 @@ def main():
     print(len(players_locales_intersections([('EU', 'en_GB'), ('EU', 'de_DE'), ('EU', 'es_ES'), ('EU', 'fr_FR'),
                                              ('EU', 'it_IT'), ('EU', 'pt_PT'), ('EU', 'ru_RU')])))
 
-    print(ranking('EU', 'it_IT', 100))
+    # print(characters_ranking('EU', 'it_IT', 100))
+    # print(gender_ranking('EU', 'it_IT'))
+    # print(race_ranking('EU', 'it_IT'))
+    print(class_ranking('EU', 'it_IT'))
 
 
 if __name__ == "__main__":
