@@ -10,6 +10,7 @@ import sys
 import csv
 from tqdm import tqdm
 from collections import Counter
+import time
 
 ###############################################
 ####
@@ -541,6 +542,115 @@ def class_ranking(nation, locale):
     return result
 
 
+# MEMO WOW is out only from 2004
+def avg_total_playtime(nation, locale):
+    """ Return the average total playtime(last timestamp-oldest achievement timestamp) for the given locale """
+    # achievements > oldest(achievementsCompletedTimestamp)
+    # time is in epoch (milliseconds)
+    logging.debug('avg_total_playtime(' + nation + ', ' + locale + ')')
+
+    DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, nation, locale)
+    CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
+
+    result = 0
+    num_players = 0
+
+    # Progressbar in terminal
+    with tqdm(total=len(os.listdir(CHARACTER_PATH))) as pbar:
+        for file in os.listdir(CHARACTER_PATH):
+            pbar.update(1)
+            if not file.endswith('.json'):
+                continue
+            with open(os.path.join(CHARACTER_PATH, file)) as character_file:
+                try:
+                    character_json = json.load(character_file)
+                    try:
+                        for i in sorted(character_json['achievements']['achievementsCompletedTimestamp']):
+                            if i > 0:
+                                result += character_json['lastModified'] - i
+                                num_players += 1
+                                break
+                    except KeyError as err:
+                        logging.warning('KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                        logging.warning(str(os.path.join(CHARACTER_PATH, file)))
+                except json.decoder.JSONDecodeError as err:
+                    # Probable incomplete or wrongly downloaded data, retry
+                    logging.warning('JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                    logging.warning(str(os.path.join(CHARACTER_PATH, file)))
+                    continue
+    print('total epoch: ' + str(result))
+    print('total players: ' + str(num_players))
+    result = result / num_players
+    # output to csv file
+    with open(os.path.join(os.getcwd(), 'Analysis',
+                           'avg_total_playtime_' + nation + '_' + locale + '.csv'),
+              'w',
+              newline='',
+              encoding='utf-8') as output:
+        writer = csv.writer(output)
+        writer.writerow([result])
+
+    return result
+
+
+def playtime_characters_ranking(nation, locale, max_num=100):
+    """ Return a list of max_num players from the given locale
+    sorted by characters total playtime in decreasing order """
+    logging.debug('playtime_characters_ranking(' + nation + ', ' + locale + ', ' + str(max_num) + ')')
+
+    leaderboard = [['', 0]]
+    DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, nation, locale)
+    CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
+
+    # Progressbar in terminal
+    with tqdm(total=len(os.listdir(CHARACTER_PATH))) as pbar:
+        for file in os.listdir(CHARACTER_PATH):
+            pbar.update(1)
+            if not file.endswith('.json'):
+                continue
+            with open(os.path.join(CHARACTER_PATH, file)) as character_file:
+                try:
+                    character_json = json.load(character_file)
+                    try:
+                        character_playtime = 0
+                        for i in sorted(character_json['achievements']['achievementsCompletedTimestamp']):
+                            if i > 0:
+                                character_playtime = character_json['lastModified'] - i
+                                break
+                        if character_playtime > leaderboard[-1][1] or len(leaderboard) < max_num:
+                            # INSERTION SORT (linear)
+                            i = 0
+                            for character, character_playtime in leaderboard:
+                                if character_json['achievementPoints'] > character_playtime:
+                                    break
+                                else:
+                                    i += 1
+                            leaderboard = \
+                                leaderboard[0:i] + \
+                                [(character_json['name'], character_playtime)] + \
+                                leaderboard[i:100]
+                    except KeyError as err:
+                        logging.warning('KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                        logging.warning(str(os.path.join(CHARACTER_PATH, file)))
+                except json.decoder.JSONDecodeError as err:
+                    # Probable incomplete or wrongly downloaded data, retry
+                    logging.warning('JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                    logging.warning(str(os.path.join(CHARACTER_PATH, file)))
+                    continue
+    # print(leaderboard)
+    # output to csv file
+    with open(os.path.join(os.getcwd(), 'Analysis',
+                           'playtime_characters_ranking' + nation + '_' + locale + '_TOP' + str(max_num) + '.csv'),
+              'w',
+              newline='',
+              encoding='utf-8') as output:
+        writer = csv.writer(output)
+        for character, character_playtime in leaderboard:
+            writer.writerow([character, character_playtime])
+
+    return leaderboard
+
+
 ###############################################
 logging.info('START analyzer')
 
@@ -576,7 +686,9 @@ def main():
     # print(characters_ranking('EU', 'it_IT', 100))
     # print(gender_ranking('EU', 'it_IT'))
     # print(race_ranking('EU', 'it_IT'))
-    print(class_ranking('EU', 'it_IT'))
+    # print(class_ranking('EU', 'it_IT'))
+    # print(avg_total_playtime('EU', 'it_IT'))
+    print(playtime_characters_ranking('EU', 'it_IT', 100))
 
 
 if __name__ == "__main__":
