@@ -620,8 +620,8 @@ def playtime_characters_ranking(nation, locale, max_num=100):
                         if character_playtime > leaderboard[-1][1] or len(leaderboard) < max_num:
                             # INSERTION SORT (linear)
                             i = 0
-                            for character, character_playtime in leaderboard:
-                                if character_json['achievementPoints'] > character_playtime:
+                            for character, score in leaderboard:
+                                if character_playtime > score:
                                     break
                                 else:
                                     i += 1
@@ -640,7 +640,7 @@ def playtime_characters_ranking(nation, locale, max_num=100):
     # print(leaderboard)
     # output to csv file
     with open(os.path.join(os.getcwd(), 'Analysis',
-                           'playtime_characters_ranking' + nation + '_' + locale + '_TOP' + str(max_num) + '.csv'),
+                           'playtime_characters_ranking_' + nation + '_' + locale + '_TOP' + str(max_num) + '.csv'),
               'w',
               newline='',
               encoding='utf-8') as output:
@@ -649,6 +649,140 @@ def playtime_characters_ranking(nation, locale, max_num=100):
             writer.writerow([character, character_playtime])
 
     return leaderboard
+
+
+# TODO adjust the results: biased by players restarting the game
+def avg_playtime_per_level(nation, locale):
+    """ Return the avg total playtime for each character level for the given locale """
+    logging.debug('avg_playtime_per_level(' + nation + ', ' + locale + ')')
+
+    DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, nation, locale)
+    CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
+
+    result = {}
+    result_numers = {}
+
+    # Progressbar in terminal
+    with tqdm(total=len(os.listdir(CHARACTER_PATH))) as pbar:
+        for file in os.listdir(CHARACTER_PATH):
+            pbar.update(1)
+            if not file.endswith('.json'):
+                continue
+            with open(os.path.join(CHARACTER_PATH, file)) as character_file:
+                try:
+                    character_json = json.load(character_file)
+                    try:
+                        character_playtime = 0
+                        for i in sorted(character_json['achievements']['achievementsCompletedTimestamp']):
+                            if i > 0:
+                                character_playtime = character_json['lastModified'] - i
+                                break
+                        result.setdefault(character_json['level'], 0)
+                        result_numers.setdefault(character_json['level'], 0)
+                        result[character_json['level']] += character_playtime
+                        result_numers[character_json['level']] += 1
+                    except KeyError as err:
+                        logging.warning('KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                        logging.warning(str(os.path.join(CHARACTER_PATH, file)))
+                except json.decoder.JSONDecodeError as err:
+                    # Probable incomplete or wrongly downloaded data, retry
+                    logging.warning('JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                    logging.warning(str(os.path.join(CHARACTER_PATH, file)))
+                    continue
+    print(result)
+    for i in result:
+        result[i] = result[i] / result_numers[i]
+    # output to csv file
+    with open(os.path.join(os.getcwd(), 'Analysis',
+                           'avg_playtime_per_level_' + nation + '_' + locale + '.csv'),
+              'w',
+              newline='',
+              encoding='utf-8') as output:
+        writer = csv.writer(output)
+        for level_avg_playtime in result:
+            writer.writerow([level_avg_playtime, result[level_avg_playtime]])
+
+    return result
+
+# TODO also here some player achieve levels "instantly", probably paying or starting again with a new character
+def avg_leveling_playtime(nation, locale):
+    """ Return the avg time needed to reach a certain level for the given locale """
+    logging.debug('avg_leveling_playtime(' + nation + ', ' + locale + ')')
+
+    DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, nation, locale)
+    CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
+    ACHIEVEMENTS_PATH = os.path.join(DB_LOCALE_PATH, 'data', 'character', 'achievements')
+
+    result = {}
+    result_numers = {}
+    # maps achievements id to their natural language name
+    id_names = {}
+
+    # Find all leveling achievements
+    with open(os.path.join(ACHIEVEMENTS_PATH, 'achievements.json')) as achievements_file:
+        try:
+            achievements_json = json.load(achievements_file)
+            try:
+                # achievements_json['achievements'][0] -> id=92
+                for i in achievements_json['achievements'][0]['achievements'][0:12]:
+                    id_names[i['id']] = i['icon']
+                    result[i['id']] = 0
+                    result_numers[i['id']] = 0
+            except KeyError as err:
+                logging.warning('KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                logging.warning(str(os.path.join(ACHIEVEMENTS_PATH, 'achievements.json')))
+        except json.decoder.JSONDecodeError as err:
+            # Probable incomplete or wrongly downloaded data, retry
+            logging.warning('JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+            logging.warning(str(os.path.join(ACHIEVEMENTS_PATH, 'achievements.json')))
+
+    # Progressbar in terminal
+    with tqdm(total=len(os.listdir(CHARACTER_PATH))) as pbar:
+        for file in os.listdir(CHARACTER_PATH):
+            pbar.update(1)
+            if not file.endswith('.json'):
+                continue
+            with open(os.path.join(CHARACTER_PATH, file)) as character_file:
+                try:
+                    character_json = json.load(character_file)
+                    try:
+                        character_start_playtime = 0
+                        for i in sorted(character_json['achievements']['achievementsCompletedTimestamp']):
+                            if i > 0:
+                                character_start_playtime = i
+                                break
+                        for achievement in id_names:
+                            try:
+                                index = character_json['achievements']['achievementsCompleted'].index(achievement)
+                                # for low levels this difference can be 0
+                                result[achievement] += character_json['achievements']['achievementsCompletedTimestamp'][
+                                                           index] - character_start_playtime
+                                result_numers[achievement] += 1
+                            except ValueError:
+                                # achievement not completed
+                                continue
+                    except KeyError as err:
+                        logging.warning('KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                        logging.warning(str(os.path.join(CHARACTER_PATH, file)))
+                except json.decoder.JSONDecodeError as err:
+                    # Probable incomplete or wrongly downloaded data, retry
+                    logging.warning('JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                    logging.warning(str(os.path.join(CHARACTER_PATH, file)))
+                    continue
+    print(result)
+    for i in result:
+        result[i] = result[i] / result_numers[i]
+    # output to csv file
+    with open(os.path.join(os.getcwd(), 'Analysis',
+                           'avg_leveling_playtime_' + nation + '_' + locale + '.csv'),
+              'w',
+              newline='',
+              encoding='utf-8') as output:
+        writer = csv.writer(output)
+        for level_achievement in result:
+            writer.writerow([id_names[level_achievement], level_achievement, result[level_achievement]])
+
+    return result
 
 
 ###############################################
@@ -688,7 +822,9 @@ def main():
     # print(race_ranking('EU', 'it_IT'))
     # print(class_ranking('EU', 'it_IT'))
     # print(avg_total_playtime('EU', 'it_IT'))
-    print(playtime_characters_ranking('EU', 'it_IT', 100))
+    # print(playtime_characters_ranking('EU', 'it_IT', 100))
+    # print(avg_playtime_per_level('EU', 'it_IT'))
+    print(avg_leveling_playtime('EU', 'it_IT'))
 
 
 if __name__ == "__main__":
