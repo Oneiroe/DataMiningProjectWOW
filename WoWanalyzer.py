@@ -375,7 +375,7 @@ def characters_ranking(nation, locale, max_num=100):
                     continue
     # print(leaderboard)
     # output to csv file
-    with open(os.path.join(os.getcwd(), 'Analysis',
+    with open(os.path.join(os.getcwd(), 'Results',
                            'players_leaderboard_' + nation + '_' + locale + '_TOP' + str(max_num) + '.csv'),
               'w',
               newline='',
@@ -416,7 +416,7 @@ def gender_ranking(nation, locale):
                     continue
     print(result)
     # output to csv file
-    with open(os.path.join(os.getcwd(), 'Analysis',
+    with open(os.path.join(os.getcwd(), 'Results',
                            'gender_ranking_' + nation + '_' + locale + '.csv'),
               'w',
               newline='',
@@ -473,7 +473,7 @@ def race_ranking(nation, locale):
                     continue
     print(result)
     # output to csv file
-    with open(os.path.join(os.getcwd(), 'Analysis',
+    with open(os.path.join(os.getcwd(), 'Results',
                            'race_ranking_' + nation + '_' + locale + '.csv'),
               'w',
               newline='',
@@ -530,7 +530,7 @@ def class_ranking(nation, locale):
                     continue
     print(result)
     # output to csv file
-    with open(os.path.join(os.getcwd(), 'Analysis',
+    with open(os.path.join(os.getcwd(), 'Results',
                            'class_ranking_' + nation + '_' + locale + '.csv'),
               'w',
               newline='',
@@ -582,7 +582,7 @@ def avg_total_playtime(nation, locale):
     print('total players: ' + str(num_players))
     result = result / num_players
     # output to csv file
-    with open(os.path.join(os.getcwd(), 'Analysis',
+    with open(os.path.join(os.getcwd(), 'Results',
                            'avg_total_playtime_' + nation + '_' + locale + '.csv'),
               'w',
               newline='',
@@ -639,7 +639,7 @@ def playtime_characters_ranking(nation, locale, max_num=100):
                     continue
     # print(leaderboard)
     # output to csv file
-    with open(os.path.join(os.getcwd(), 'Analysis',
+    with open(os.path.join(os.getcwd(), 'Results',
                            'playtime_characters_ranking_' + nation + '_' + locale + '_TOP' + str(max_num) + '.csv'),
               'w',
               newline='',
@@ -693,7 +693,7 @@ def avg_playtime_per_level(nation, locale):
     for i in result:
         result[i] = result[i] / result_numers[i]
     # output to csv file
-    with open(os.path.join(os.getcwd(), 'Analysis',
+    with open(os.path.join(os.getcwd(), 'Results',
                            'avg_playtime_per_level_' + nation + '_' + locale + '.csv'),
               'w',
               newline='',
@@ -703,6 +703,7 @@ def avg_playtime_per_level(nation, locale):
             writer.writerow([level_avg_playtime, result[level_avg_playtime]])
 
     return result
+
 
 # TODO also here some player achieve levels "instantly", probably paying or starting again with a new character
 def avg_leveling_playtime(nation, locale):
@@ -773,7 +774,7 @@ def avg_leveling_playtime(nation, locale):
     for i in result:
         result[i] = result[i] / result_numers[i]
     # output to csv file
-    with open(os.path.join(os.getcwd(), 'Analysis',
+    with open(os.path.join(os.getcwd(), 'Results',
                            'avg_leveling_playtime_' + nation + '_' + locale + '.csv'),
               'w',
               newline='',
@@ -824,7 +825,7 @@ def main():
     # print(avg_total_playtime('EU', 'it_IT'))
     # print(playtime_characters_ranking('EU', 'it_IT', 100))
     # print(avg_playtime_per_level('EU', 'it_IT'))
-    print(avg_leveling_playtime('EU', 'it_IT'))
+    # print(avg_leveling_playtime('EU', 'it_IT'))
 
 
 if __name__ == "__main__":
