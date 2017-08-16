@@ -11,7 +11,7 @@
 /DB/WOW/
 
 # Analitical results and support files
-/Analysis/
+/Results/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
