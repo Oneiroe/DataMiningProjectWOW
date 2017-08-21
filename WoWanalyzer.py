@@ -11,6 +11,7 @@ import csv
 from tqdm import tqdm
 from collections import Counter
 import time
+import WOWanalysis.frequent_itemsets_apriori as my_apriori
 
 ###############################################
 ####
@@ -542,6 +543,49 @@ def class_ranking(nation, locale):
     return result
 
 
+def level_ranking(nation, locale):
+    """ Number pof players per level for the given locale """
+    logging.debug('level_ranking(' + nation + ', ' + locale + ')')
+
+    DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, nation, locale)
+    CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
+
+    result = Counter()
+
+    # Progressbar in terminal
+    with tqdm(total=len(os.listdir(CHARACTER_PATH))) as pbar:
+        for file in os.listdir(CHARACTER_PATH):
+            pbar.update(1)
+            if not file.endswith('.json'):
+                continue
+            with open(os.path.join(CHARACTER_PATH, file)) as character_file:
+                try:
+                    character_json = json.load(character_file)
+                    try:
+                        character_level = character_json['level']
+                        result[character_level] += 1
+                    except KeyError as err:
+                        logging.warning('KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                        logging.warning(str(os.path.join(CHARACTER_PATH, file)))
+                except json.decoder.JSONDecodeError as err:
+                    # Probable incomplete or wrongly downloaded data, retry
+                    logging.warning('JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                    logging.warning(str(os.path.join(CHARACTER_PATH, file)))
+                    continue
+    print(result)
+
+    with open(os.path.join(os.getcwd(), 'Results',
+                           'level_ranking_' + nation + '_' + locale + '.csv'),
+              'w',
+              newline='',
+              encoding='utf-8') as output:
+        writer = csv.writer(output)
+        for level, count in result.most_common():
+            writer.writerow([level, count])
+
+    return result
+
+
 # MEMO WOW is out only from 2004
 def avg_total_playtime(nation, locale):
     """ Return the average total playtime(last timestamp-oldest achievement timestamp) for the given locale """
@@ -787,6 +831,121 @@ def avg_leveling_playtime(nation, locale):
 
 
 ###############################################
+# FREQUENT ITEMSET
+##############
+# TODO
+# character field: "items"
+# next: mounts, pets, petSlots
+# GRANULARITY per nation, level
+##############
+
+def apriori_offline_frequent_itemsets_nation(nation, locale, threshold):
+    """ Returns the frequent itemset in invertory("items" character fields) of all the players for the given locale """
+    logging.debug('apriori_offline_frequent_itemsets_nation(' + nation + ', ' + locale + ')')
+
+    # A-PRIORI
+    input_file_path = 'itemsets_' + nation + '_' + locale + '.dat'
+    output_file_path = 'frequent_itemsets_' + nation + '_' + locale + '.dat'
+    input_file = open(input_file_path, "r")
+
+    print('threshold:' + str(threshold))
+
+    tstamp = time.time()
+    print('#######################################')
+    res_apriori = my_apriori.a_priori(input_file, output_file_path, threshold)
+    freq_item_count = 0
+    for i in res_apriori:
+        freq_item_count += len(i)
+    print('#######################################')
+    print('Total frequent itemsets:' + str(freq_item_count))
+    print('Total A-priori time:' + str(time.time() - tstamp))
+    print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n')
+    print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
+    input_file.close()
+    return
+
+
+def apriori_offline_frequent_itemsets_total(itemsets_path, output_path, threshold):
+    """ Returns the frequent itemsets of the whole dataset """
+    logging.debug('apriori_offline_frequent_itemsets_total()')
+
+    # A-PRIORI
+    input_file = open(itemsets_path, "r")
+
+    print('threshold:' + str(threshold))
+
+    tstamp = time.time()
+    print('#######################################')
+    res_apriori = my_apriori.a_priori(input_file, output_path, threshold)
+    freq_item_count = 0
+    for i in res_apriori:
+        freq_item_count += len(i)
+    print('#######################################')
+    print('Total frequent itemsets:' + str(freq_item_count))
+    print('Total A-priori time:' + str(time.time() - tstamp))
+    print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n')
+    print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
+    input_file.close()
+    return
+
+
+def apriori_offline_frequent_itemsets_level_nation(nation, locale, threshold):
+    """ Returns the frequent itemset in invertory("items" character fields)
+    of all the players for the given locale grouped per level (10 lv per group)"""
+    logging.debug('apriori_offline_frequent_itemsets_level_nation(' + nation + ', ' + locale + ')')
+    for level in range(0, 111, 10):
+        # A-PRIORI
+        input_file_path = os.path.join(os.getcwd(),
+                                       'Results',
+                                       'itemsets_' + nation + '_' + locale + '_lv_' + str(level) + '.dat')
+        output_file_path = os.path.join(os.getcwd(),
+                                        'Results',
+                                        'frequent_itemsets_' + nation + '_' + locale + '_lv_' + str(level) + '.dat')
+        input_file = open(input_file_path, "r")
+
+        print('threshold:' + str(threshold))
+
+        tstamp = time.time()
+        print('#######################################')
+        res_apriori = my_apriori.a_priori(input_file, output_file_path, threshold)
+        freq_item_count = 0
+        for i in res_apriori:
+            freq_item_count += len(i)
+        print('#######################################')
+        print('Total frequent itemsets:' + str(freq_item_count))
+        print('Total A-priori time:' + str(time.time() - tstamp))
+        print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n')
+        print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
+        input_file.close()
+    return
+
+
+def apriori_offline_frequent_itemsets_level_total(itemsets_base_path, output_base_path, threshold):
+    """ Returns the frequent itemsets of the whole dataset per level"""
+    logging.debug('apriori_offline_frequent_itemsets_level_total()')
+    for level in range(0, 111, 10):
+        # A-PRIORI
+
+        input_file = open(os.path.join(itemsets_base_path, 'total_itemsets_lv_' + str(level) + '.dat'), 'r')
+        output_path = os.path.join(output_base_path, 'total_frequent_itemsets_lv_' + str(level) + '.dat')
+        print('threshold:' + str(threshold))
+
+        tstamp = time.time()
+        print('#######################################')
+        res_apriori = my_apriori.a_priori(input_file, output_path, threshold)
+        freq_item_count = 0
+        for i in res_apriori:
+            freq_item_count += len(i)
+        print('#######################################')
+        print('Total frequent itemsets:' + str(freq_item_count))
+        print('Total A-priori time:' + str(time.time() - tstamp))
+        print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n')
+        print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
+        input_file.close()
+    return
+
+
+###############################################
 logging.info('START analyzer')
 
 
@@ -801,22 +960,22 @@ def main():
     #### SIMPLE ANALYTICAL STUFF
     print('===SIMPLE ANALYSIS')
 
-    print('total #players:' + str(number_of_players_retrieved_total()))
-    print('distinct total #players:' + str(number_of_distinct_players_retrieved_total()))
-    print(number_of_players_retrieved_per_nation())
-    print(number_of_distinct_players_retrieved_per_nation())
-    print(number_of_players_retrieved_per_locale())
-    print(number_of_distinct_players_retrieved_per_locale())
-
-    print(len(players_locales_intersections([('TW', 'zh_TW'), ('KR', 'ko_KR')])))
-    print(len(players_locales_intersections([('TW', 'zh_TW'), ('US', 'en_US')])))
-    print(len(players_locales_intersections([('TW', 'zh_TW'), ('EU', 'en_GB')])))
-
-    print(len(players_locales_intersections([('KR', 'ko_KR'), ('US', 'en_US')])))
-    print(len(players_locales_intersections([('KR', 'ko_KR'), ('EU', 'en_GB')])))
-    print(len(players_locales_intersections([('US', 'en_US'), ('EU', 'en_GB')])))
-    print(len(players_locales_intersections([('EU', 'en_GB'), ('EU', 'de_DE'), ('EU', 'es_ES'), ('EU', 'fr_FR'),
-                                             ('EU', 'it_IT'), ('EU', 'pt_PT'), ('EU', 'ru_RU')])))
+    # print('total #players:' + str(number_of_players_retrieved_total()))
+    # print('distinct total #players:' + str(number_of_distinct_players_retrieved_total()))
+    # print(number_of_players_retrieved_per_nation())
+    # print(number_of_distinct_players_retrieved_per_nation())
+    # print(number_of_players_retrieved_per_locale())
+    # print(number_of_distinct_players_retrieved_per_locale())
+    #
+    # print(len(players_locales_intersections([('TW', 'zh_TW'), ('KR', 'ko_KR')])))
+    # print(len(players_locales_intersections([('TW', 'zh_TW'), ('US', 'en_US')])))
+    # print(len(players_locales_intersections([('TW', 'zh_TW'), ('EU', 'en_GB')])))
+    #
+    # print(len(players_locales_intersections([('KR', 'ko_KR'), ('US', 'en_US')])))
+    # print(len(players_locales_intersections([('KR', 'ko_KR'), ('EU', 'en_GB')])))
+    # print(len(players_locales_intersections([('US', 'en_US'), ('EU', 'en_GB')])))
+    # print(len(players_locales_intersections([('EU', 'en_GB'), ('EU', 'de_DE'), ('EU', 'es_ES'), ('EU', 'fr_FR'),
+    #                                          ('EU', 'it_IT'), ('EU', 'pt_PT'), ('EU', 'ru_RU')])))
 
     # print(characters_ranking('EU', 'it_IT', 100))
     # print(gender_ranking('EU', 'it_IT'))
@@ -826,6 +985,42 @@ def main():
     # print(playtime_characters_ranking('EU', 'it_IT', 100))
     # print(avg_playtime_per_level('EU', 'it_IT'))
     # print(avg_leveling_playtime('EU', 'it_IT'))
+
+    # print(level_ranking('EU', 'it_IT'))
+    # for nation in location:
+    #     for locale in location[nation]:
+    #         level_ranking(nation, locale)
+
+    #### FREQUENT ITEMSET
+    print('===FREQUENT ITEMSET')
+    ### APRIORI GENERAL
+    # for nation in location:
+    #     for locale in location[nation]:
+    #         output_path = 'itemsets_' + nation + '_' + locale + '.dat'
+    #         my_apriori.create_nation_characters_itemsets(nation, locale, DB_BASE_PATH, output_path)
+    # my_apriori.join_nations_characters_itemets(os.path.join(os.getcwd(), 'Results'),
+    #                                            os.path.join(os.getcwd(), 'Results', 'total_itemsets.dat'))
+    # apriori_offline_frequent_itemsets_nation('EU', 'it_IT', 0.01)
+    # apriori_offline_frequent_itemsets_total(os.path.join(os.getcwd(), 'Results', 'total_itemsets.dat'),
+    #                                         os.path.join(os.getcwd(), 'Results', 'total_frequent_itemsets.dat'),
+    #                                         0.001)
+
+    ### APRIORI per LEVEL
+    # for nation in location:
+    #     for locale in location[nation]:
+    #         my_apriori.create_level_nation_characters_itemsets(nation,
+    #                                                            locale,
+    #                                                            DB_BASE_PATH,
+    #                                                            os.path.join(os.getcwd(), 'Results'))
+    # my_apriori.join_level_nations_characters_itemets(os.path.join(os.getcwd(), 'Results'),
+    #                                                  os.path.join(os.getcwd(), 'Results'))
+    # for nation in location:
+    #     for locale in location[nation]:
+    #         apriori_offline_frequent_itemsets_level_nation(nation, locale, 0.01)
+    # apriori_offline_frequent_itemsets_level_total(os.path.join(os.getcwd(), 'Results'),
+    #                                               os.path.join(os.getcwd(), 'Results'),
+    #                                               0.01)
+    #
 
 
 if __name__ == "__main__":
