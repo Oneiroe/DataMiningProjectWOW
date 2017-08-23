@@ -1090,23 +1090,23 @@ def main():
     #
 
     ### APRIORI per CLASS and LEVEL
-    CLASS_PATH = os.path.join(DB_BASE_PATH, 'US', 'en_US', 'data', 'character', 'classes')
+    # CLASS_PATH = os.path.join(DB_BASE_PATH, 'US', 'en_US', 'data', 'character', 'classes')
 
-    classes = []
-    # Find all classes
-    with open(os.path.join(CLASS_PATH, 'classes.json')) as classes_file:
-        try:
-            classes_json = json.load(classes_file)
-            try:
-                for character_class in classes_json['classes']:
-                    classes.append(character_class['id'])
-            except KeyError as err:
-                logging.warning('KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
-                logging.warning(str(os.path.join(CLASS_PATH, 'classes.json')))
-        except json.decoder.JSONDecodeError as err:
-            # Probable incomplete or wrongly downloaded data, retry
-            logging.warning('JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
-            logging.warning(str(os.path.join(CLASS_PATH, 'classes.json')))
+    # classes = []
+    # # Find all classes
+    # with open(os.path.join(CLASS_PATH, 'classes.json')) as classes_file:
+    #     try:
+    #         classes_json = json.load(classes_file)
+    #         try:
+    #             for character_class in classes_json['classes']:
+    #                 classes.append(character_class['id'])
+    #         except KeyError as err:
+    #             logging.warning('KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+    #             logging.warning(str(os.path.join(CLASS_PATH, 'classes.json')))
+    #     except json.decoder.JSONDecodeError as err:
+    #         # Probable incomplete or wrongly downloaded data, retry
+    #         logging.warning('JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+    #         logging.warning(str(os.path.join(CLASS_PATH, 'classes.json')))
 
     # for nation in location:
     #     for locale in location[nation]:
@@ -1117,14 +1117,16 @@ def main():
     # my_apriori.join_class_level_nations_characters_itemets(os.path.join(os.getcwd(), 'Results'),
     #                                                        os.path.join(os.getcwd(), 'Results'),
     #                                                        classes)
-    for nation in location:
-        for locale in location[nation]:
-            apriori_offline_frequent_itemsets_class_level_nation(nation, locale, 0.01, classes)
-    apriori_offline_frequent_itemsets_class_level_total(os.path.join(os.getcwd(), 'Results'),
-                                                        os.path.join(os.getcwd(), 'Results'),
-                                                        0.01,
-                                                        classes)
+    # for nation in location:
+    #     for locale in location[nation]:
+    #         apriori_offline_frequent_itemsets_class_level_nation(nation, locale, 0.01, classes)
+    # apriori_offline_frequent_itemsets_class_level_total(os.path.join(os.getcwd(), 'Results'),
+    #                                                     os.path.join(os.getcwd(), 'Results'),
+    #                                                     0.01,
+    #                                                     classes)
 
+    #### SIMILARITY
+    print('===SIMILARITY')
 
 if __name__ == "__main__":
     main()

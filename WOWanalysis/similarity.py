@@ -1,3 +1,7 @@
+"""
+Algorithms to compute the similarity among characters
+"""
+
 import itertools
 import time
 import random
@@ -15,7 +19,7 @@ import json
 
 
 ###############################################
-# GENERAL DISTANCES FUNCTION
+# GENERAL DISTANCE FUNCTIONS
 ##############
 
 def jaccard_distance(set_1, set_2):
@@ -44,7 +48,7 @@ def euclidean_distance(vector_1, vector_2):
 
 
 ###############################################
-# CHARACTER DISTANCES FUNCTION
+# CHARACTERS DISTANCE FUNCTIONS
 ##############
 
 def distance_appearance(character_1_json_path, character_2_json_path):
@@ -229,8 +233,19 @@ def distance_talents(character_1_json_path, character_2_json_path):
             character_1_json = json.load(character_1_file)
             character_2_json = json.load(character_2_file)
             try:
-                # TODO
-                pass
+                talents_1 = set()
+                for category in character_1_json['talents']:
+                    for talent in category['talents']:
+                        if talent is not None:
+                            talents_1.add(talent['spell']['id'])
+
+                talents_2 = set()
+                for category in character_2_json['talents']:
+                    for talent in category['talents']:
+                        if talent is not None:
+                            talents_2.add(talent['spell']['id'])
+
+                distance = jaccard_distance(talents_1, talents_2)
             except KeyError as err:
                 logging.warning('KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
             except ValueError as err:

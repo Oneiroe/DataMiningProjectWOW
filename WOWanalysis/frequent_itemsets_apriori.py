@@ -1,3 +1,6 @@
+"""
+Algorithms to compute frequent itemsets of players inventory
+"""
 import itertools
 import time
 import random
