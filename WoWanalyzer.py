@@ -844,8 +844,8 @@ def apriori_offline_frequent_itemsets_nation(nation, locale, threshold):
     logging.debug('apriori_offline_frequent_itemsets_nation(' + nation + ', ' + locale + ')')
 
     # A-PRIORI
-    input_file_path = 'itemsets_' + nation + '_' + locale + '.dat'
-    output_file_path = 'frequent_itemsets_' + nation + '_' + locale + '.dat'
+    input_file_path = os.path.join(os.getcwd(), 'Results', 'itemsets_' + nation + '_' + locale + '.dat')
+    output_file_path = os.path.join(os.getcwd(), 'Results', 'frequent_itemsets_' + nation + '_' + locale + '.dat')
     input_file = open(input_file_path, "r")
 
     print('threshold:' + str(threshold))
@@ -945,6 +945,89 @@ def apriori_offline_frequent_itemsets_level_total(itemsets_base_path, output_bas
     return
 
 
+def apriori_offline_frequent_itemsets_class_level_nation(nation, locale, threshold):
+    """ Returns the frequent itemset in invertory("items" character fields)
+    of all the players for the given locale grouped per class and level (10 lv per group)"""
+    logging.debug('apriori_offline_frequent_itemsets_class_level_nation(' + nation + ', ' + locale + ')')
+
+    DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, nation, locale)
+    CLASS_PATH = os.path.join(DB_LOCALE_PATH, 'data', 'character', 'classes')
+
+    classes = []
+    # Find all classes
+    with open(os.path.join(CLASS_PATH, 'classes.json')) as classes_file:
+        try:
+            classes_json = json.load(classes_file)
+            try:
+                for character_class in classes_json['classes']:
+                    classes.append(character_class)
+            except KeyError as err:
+                logging.warning('KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                logging.warning(str(os.path.join(CLASS_PATH, 'classes.json')))
+        except json.decoder.JSONDecodeError as err:
+            # Probable incomplete or wrongly downloaded data, retry
+            logging.warning('JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+            logging.warning(str(os.path.join(CLASS_PATH, 'classes.json')))
+
+    for character_class in classes:
+        for level in range(0, 111, 10):
+            # A-PRIORI
+            input_file_path = os.path.join(os.getcwd(),
+                                           'Results',
+                                           'itemsets_' + nation + '_' + locale + '_lv_' + str(level) + '_class_' + str(
+                                               character_class) + '.dat')
+            output_file_path = os.path.join(os.getcwd(),
+                                            'Results',
+                                            'frequent_itemsets_' + nation + '_' + locale + '_lv_' + str(
+                                                level) + '_class_' + str(character_class) + '.dat')
+            input_file = open(input_file_path, "r")
+
+            print('threshold:' + str(threshold))
+
+            tstamp = time.time()
+            print('#######################################')
+            res_apriori = my_apriori.a_priori(input_file, output_file_path, threshold)
+            freq_item_count = 0
+            for i in res_apriori:
+                freq_item_count += len(i)
+            print('#######################################')
+            print('Total frequent itemsets:' + str(freq_item_count))
+            print('Total A-priori time:' + str(time.time() - tstamp))
+            print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n')
+            print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
+            input_file.close()
+    return
+
+
+def apriori_offline_frequent_itemsets_class_level_total(itemsets_base_path, output_base_path, threshold, classes):
+    """ Returns the frequent itemsets of the whole dataset per class and level"""
+    logging.debug('apriori_offline_frequent_itemsets_class_level_total()')
+
+    for character_class in classes:
+        for level in range(0, 111, 10):
+            # A-PRIORI
+
+            input_file = open(os.path.join(itemsets_base_path, 'total_itemsets_lv_' + str(level) + '_class_' + str(
+                character_class) + '.dat'), 'r')
+            output_path = os.path.join(output_base_path, 'total_frequent_itemsets_lv_' + str(level) + '_class_' + str(
+                character_class) + '.dat')
+            print('threshold:' + str(threshold))
+
+            tstamp = time.time()
+            print('#######################################')
+            res_apriori = my_apriori.a_priori(input_file, output_path, threshold)
+            freq_item_count = 0
+            for i in res_apriori:
+                freq_item_count += len(i)
+            print('#######################################')
+            print('Total frequent itemsets:' + str(freq_item_count))
+            print('Total A-priori time:' + str(time.time() - tstamp))
+            print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n')
+            print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
+            input_file.close()
+    return
+
+
 ###############################################
 logging.info('START analyzer')
 
@@ -1021,6 +1104,22 @@ def main():
     #                                               os.path.join(os.getcwd(), 'Results'),
     #                                               0.01)
     #
+
+    ### APRIORI per CLASS and LEVEL
+    # for nation in location:
+    #     for locale in location[nation]:
+    #         my_apriori.create_class_level_nation_characters_itemsets(nation,
+    #                                                                  locale,
+    #                                                                  DB_BASE_PATH,
+    #                                                                  os.path.join(os.getcwd(), 'Results'))
+    # my_apriori.join_class_level_nations_characters_itemets(os.path.join(os.getcwd(), 'Results'),
+    #                                                        os.path.join(os.getcwd(), 'Results'))
+    for nation in location:
+        for locale in location[nation]:
+            apriori_offline_frequent_itemsets_level_nation(nation, locale, 0.1)
+    apriori_offline_frequent_itemsets_level_total(os.path.join(os.getcwd(), 'Results'),
+                                                  os.path.join(os.getcwd(), 'Results'),
+                                                  0.1)
 
 
 if __name__ == "__main__":

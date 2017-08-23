@@ -411,6 +411,103 @@ def join_level_nations_characters_itemets(results_path, output_base_path):
         i.close()
 
 
+def create_class_level_nation_characters_itemsets(nation, locale, DB_BASE_PATH, output_base_path):
+    """ Create players' items itemsets from the given locale, grouping per class and level (10 lv per group) """
+    logging.debug('create_class_level_nation_characters_itemsets(' + nation + ', ' + locale + ')')
+
+    DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, nation, locale)
+    CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
+    ITEM_CLASSES_PATH = os.path.join(DB_LOCALE_PATH, 'data', 'item', 'item_classes.json')
+    fields_to_skip = {'averageItemLevel', 'averageItemLevelEquipped'}
+    # fields=set()
+    # PREPROCESSING
+    CLASS_PATH = os.path.join(DB_LOCALE_PATH, 'data', 'character', 'classes')
+
+    classes = []
+    # Find all classes
+    with open(os.path.join(CLASS_PATH, 'classes.json')) as classes_file:
+        try:
+            classes_json = json.load(classes_file)
+            try:
+                for character_class in classes_json['classes']:
+                    classes.append(character_class['id'])
+            except KeyError as err:
+                logging.warning('KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                logging.warning(str(os.path.join(CLASS_PATH, 'classes.json')))
+        except json.decoder.JSONDecodeError as err:
+            # Probable incomplete or wrongly downloaded data, retry
+            logging.warning('JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+            logging.warning(str(os.path.join(CLASS_PATH, 'classes.json')))
+
+    output_map = {}
+    for character_class in classes:
+        output_map[character_class] = [
+            open(os.path.join(output_base_path,
+                              'itemsets_' + nation + '_' + locale + '_lv_' + str(level) + '_class_' + str(
+                                  character_class) + '.dat'), 'w') for level in range(0, 111, 10)]
+    with tqdm(total=len(os.listdir(CHARACTER_PATH))) as pbar:
+        for file in os.listdir(CHARACTER_PATH):
+            pbar.update(1)
+            if not file.endswith('.json'):
+                continue
+            with open(os.path.join(CHARACTER_PATH, file)) as character_file:
+                try:
+                    character_json = json.load(character_file)
+                    try:
+                        # like this we are not distinguish between items category, just caring about itemset
+                        character_equipment = []
+                        for field in character_json['items']:
+                            if field in fields_to_skip:
+                                continue
+                            # fields.add(field)
+                            character_equipment.append(character_json['items'][field]['id'])
+                        character_level = character_json['level']
+                        output_map[character_json['class']][int(character_level / 10)].writelines(
+                            str(i) + ' ' for i in character_equipment)
+                        # itemset_file.write(os.linesep)
+                        output_map[character_json['class']][int(character_level / 10)].write('\n')
+                    except KeyError as err:
+                        logging.warning('KeyError: ' + str(err) + ' -- line: ' + str(
+                            sys.exc_info()[-1].tb_lineno))
+                        logging.warning(str(os.path.join(CHARACTER_PATH, file)))
+                except json.decoder.JSONDecodeError as err:
+                    # Probable incomplete or wrongly downloaded data, retry
+                    logging.warning(
+                        'JSONDecodeError: ' + str(err) + ' -- line: ' + str(
+                            sys.exc_info()[-1].tb_lineno))
+                    logging.warning(str(os.path.join(CHARACTER_PATH, file)))
+                    continue
+    for character_class in output_map:
+        for i in output_map[character_class]:
+            i.close()
+
+
+def join_class_level_nations_characters_itemets(results_path, output_base_path, classes):
+    """ Join in a single files the itemsets of all the locales per class and  lavel"""
+    logging.debug('join_class_level_nations_characters_itemets()')
+
+    output_map = {}
+    for character_class in classes:
+        output_map[character_class] = [
+            open(os.path.join(output_base_path, 'total_itemsets_lv_' + str(level) + str(level) + '_class_' + str(
+                character_class) + '.dat'), 'w')
+            for level in range(0, 111, 10)]
+    with tqdm(total=12 * 12) as pbar:
+        for file in os.listdir(results_path):
+            if (not file.startswith('itemsets_')) or (not file.endswith('.dat')) or ('_lv_' not in file):
+                continue
+            pbar.update(1)
+            with open(os.path.join(results_path, file)) as items_file:
+                file_level = int(file.split('lv_')[1].split('_')[0])
+                file_character_class = int(file.split('class_')[1][:-4])
+                for line in items_file:
+                    if not line == '\n':
+                        output_map[file_character_class][int(file_level / 10)].write(line)
+    for character_class in output_map:
+        for i in output_map[character_class]:
+            i.close()
+
+
 ###############################################
 # TEST-MAIN
 ##############
