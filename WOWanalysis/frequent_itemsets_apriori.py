@@ -295,8 +295,6 @@ def create_nation_characters_itemsets(nation, locale, DB_BASE_PATH, output):
     fields_to_skip = {'averageItemLevel', 'averageItemLevelEquipped'}
     # fields=set()
     # PREPROCESSING
-    # TODO parametrize output file
-    # output='itemsets_' + nation + '_' + locale + '.dat'
     with open(output, 'w') as itemset_file:
         with tqdm(total=len(os.listdir(CHARACTER_PATH))) as pbar:
             for file in os.listdir(CHARACTER_PATH):
@@ -334,7 +332,10 @@ def join_nations_characters_itemets(results_path, output_path):
     with tqdm(total=12) as pbar:
         with open(output_path, 'w') as outfile:
             for file in os.listdir(results_path):
-                if (not file.startswith('itemsets_')) or (not file.endswith('.dat')):
+                if (not file.startswith('itemsets_')) \
+                        or (not file.endswith('.dat')) \
+                        or ('_lv_' in file) \
+                        or ('_class_' in file):
                     continue
                 pbar.update(1)
                 with open(os.path.join(results_path, file)) as items_file:
@@ -399,7 +400,10 @@ def join_level_nations_characters_itemets(results_path, output_base_path):
         for level in range(0, 111, 10)]
     with tqdm(total=12 * 12) as pbar:
         for file in os.listdir(results_path):
-            if (not file.startswith('itemsets_')) or (not file.endswith('.dat')) or ('_lv_' not in file):
+            if (not file.startswith('itemsets_')) \
+                    or (not file.endswith('.dat')) \
+                    or ('_lv_' not in file) \
+                    or ('_class_' in file):
                 continue
             pbar.update(1)
             with open(os.path.join(results_path, file)) as items_file:
@@ -489,12 +493,15 @@ def join_class_level_nations_characters_itemets(results_path, output_base_path, 
     output_map = {}
     for character_class in classes:
         output_map[character_class] = [
-            open(os.path.join(output_base_path, 'total_itemsets_lv_' + str(level) + str(level) + '_class_' + str(
+            open(os.path.join(output_base_path, 'total_itemsets_lv_' + str(level) + '_class_' + str(
                 character_class) + '.dat'), 'w')
             for level in range(0, 111, 10)]
-    with tqdm(total=12 * 12) as pbar:
+    with tqdm(total=12 * 12 * 12) as pbar:
         for file in os.listdir(results_path):
-            if (not file.startswith('itemsets_')) or (not file.endswith('.dat')) or ('_lv_' not in file):
+            if (not file.startswith('itemsets_')) \
+                    or (not file.endswith('.dat')) \
+                    or ('_lv_' not in file) \
+                    or ('_class_' not in file):
                 continue
             pbar.update(1)
             with open(os.path.join(results_path, file)) as items_file:
@@ -506,6 +513,12 @@ def join_class_level_nations_characters_itemets(results_path, output_base_path, 
     for character_class in output_map:
         for i in output_map[character_class]:
             i.close()
+
+
+def create_all_itemsets_one_pass(nations_map, DB_BASE_PATH, output_base_path, classes):
+    """ Create all the itemsets (general, total, per nation, level, class,...) scanning the dataset only once. """
+    # TODO
+    return
 
 
 ###############################################

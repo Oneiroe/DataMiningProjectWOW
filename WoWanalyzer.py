@@ -945,29 +945,13 @@ def apriori_offline_frequent_itemsets_level_total(itemsets_base_path, output_bas
     return
 
 
-def apriori_offline_frequent_itemsets_class_level_nation(nation, locale, threshold):
+def apriori_offline_frequent_itemsets_class_level_nation(nation, locale, threshold, classes):
     """ Returns the frequent itemset in invertory("items" character fields)
     of all the players for the given locale grouped per class and level (10 lv per group)"""
     logging.debug('apriori_offline_frequent_itemsets_class_level_nation(' + nation + ', ' + locale + ')')
 
     DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, nation, locale)
     CLASS_PATH = os.path.join(DB_LOCALE_PATH, 'data', 'character', 'classes')
-
-    classes = []
-    # Find all classes
-    with open(os.path.join(CLASS_PATH, 'classes.json')) as classes_file:
-        try:
-            classes_json = json.load(classes_file)
-            try:
-                for character_class in classes_json['classes']:
-                    classes.append(character_class)
-            except KeyError as err:
-                logging.warning('KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
-                logging.warning(str(os.path.join(CLASS_PATH, 'classes.json')))
-        except json.decoder.JSONDecodeError as err:
-            # Probable incomplete or wrongly downloaded data, retry
-            logging.warning('JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
-            logging.warning(str(os.path.join(CLASS_PATH, 'classes.json')))
 
     for character_class in classes:
         for level in range(0, 111, 10):
@@ -1106,6 +1090,24 @@ def main():
     #
 
     ### APRIORI per CLASS and LEVEL
+    CLASS_PATH = os.path.join(DB_BASE_PATH, 'US', 'en_US', 'data', 'character', 'classes')
+
+    classes = []
+    # Find all classes
+    with open(os.path.join(CLASS_PATH, 'classes.json')) as classes_file:
+        try:
+            classes_json = json.load(classes_file)
+            try:
+                for character_class in classes_json['classes']:
+                    classes.append(character_class['id'])
+            except KeyError as err:
+                logging.warning('KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                logging.warning(str(os.path.join(CLASS_PATH, 'classes.json')))
+        except json.decoder.JSONDecodeError as err:
+            # Probable incomplete or wrongly downloaded data, retry
+            logging.warning('JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+            logging.warning(str(os.path.join(CLASS_PATH, 'classes.json')))
+
     # for nation in location:
     #     for locale in location[nation]:
     #         my_apriori.create_class_level_nation_characters_itemsets(nation,
@@ -1113,13 +1115,15 @@ def main():
     #                                                                  DB_BASE_PATH,
     #                                                                  os.path.join(os.getcwd(), 'Results'))
     # my_apriori.join_class_level_nations_characters_itemets(os.path.join(os.getcwd(), 'Results'),
-    #                                                        os.path.join(os.getcwd(), 'Results'))
+    #                                                        os.path.join(os.getcwd(), 'Results'),
+    #                                                        classes)
     for nation in location:
         for locale in location[nation]:
-            apriori_offline_frequent_itemsets_level_nation(nation, locale, 0.1)
-    apriori_offline_frequent_itemsets_level_total(os.path.join(os.getcwd(), 'Results'),
-                                                  os.path.join(os.getcwd(), 'Results'),
-                                                  0.1)
+            apriori_offline_frequent_itemsets_class_level_nation(nation, locale, 0.01, classes)
+    apriori_offline_frequent_itemsets_class_level_total(os.path.join(os.getcwd(), 'Results'),
+                                                        os.path.join(os.getcwd(), 'Results'),
+                                                        0.01,
+                                                        classes)
 
 
 if __name__ == "__main__":
