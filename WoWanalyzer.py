@@ -41,6 +41,7 @@ TRASH_PATH_SUFFIX = 'TRASH'
 
 ###############################################
 # TO-DO
+# rename "nation" to "region"
 """
 Assignation: "I'd say that as a topic it's interesting.
 I'd go with a, b, and something along e, which is not yet clear, but can lead to some interesting findings."
@@ -164,55 +165,218 @@ def clean_duplicates():
 
 
 ###############################################
+# PRE-PROCESSING
+def one_pass_characters_locale(nation, locale, output_path):
+    """ Retrieve all the information required with a single scan of the DB for the given locale.
+    Build a DB in a single file with just the relevant info of all the characters"""
+    logging.info('one_pass_locale(' + nation + ', ' + locale + ')')
+    # PATHs
+    DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, nation, locale)
+    CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
+
+    number_players = len(os.listdir(CHARACTER_PATH))
+    number_distinct_players = len(set(os.listdir(CHARACTER_PATH)))
+
+    ACHIEVEMENTS_PATH = os.path.join(DB_LOCALE_PATH, 'data', 'character', 'achievements')
+    # maps achievements id to their natural language name
+    leveling_achievements_id_names = {}
+    # Find all leveling achievements
+    with open(os.path.join(ACHIEVEMENTS_PATH, 'achievements.json')) as achievements_file:
+        try:
+            achievements_json = json.load(achievements_file)
+            try:
+                # achievements_json['achievements'][0] -> id=92
+                for i in achievements_json['achievements'][0]['achievements'][0:12]:
+                    leveling_achievements_id_names[i['id']] = i['icon']
+            except KeyError as err:
+                logging.warning('KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                logging.warning(str(os.path.join(ACHIEVEMENTS_PATH, 'achievements.json')))
+        except json.decoder.JSONDecodeError as err:
+            # Probable incomplete or wrongly downloaded data, retry
+            logging.warning('JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+            logging.warning(str(os.path.join(ACHIEVEMENTS_PATH, 'achievements.json')))
+
+    # Characters
+    with open(output_path, 'w', newline='', encoding='utf-8') as output_file:
+        writer = csv.writer(output_file)
+        writer.writerow(
+            ['name', 'realm', 'region', 'locale', 'class', 'level', 'race', 'gender', 'achievementPoints',
+             'firstTimestamp', 'lastModified', 'TimestampLv10', 'TimestampLv20', 'TimestampLv30', 'TimestampLv40',
+             'TimestampLv50', 'TimestampLv60', 'TimestampLv70', 'TimestampLv80', 'TimestampLv85', 'TimestampLv90',
+             'TimestampLv100', 'TimestampLv110'])
+        with tqdm(total=len(os.listdir(CHARACTER_PATH))) as pbar:
+            for file in os.listdir(CHARACTER_PATH):
+                pbar.update(1)
+                if not file.endswith('.json'):
+                    continue
+                with open(os.path.join(CHARACTER_PATH, file)) as character_file:
+                    try:
+                        character_json = json.load(character_file)
+                        try:
+                            character_out = []
+                            # 'name',
+                            character_out.append(character_json['name'])
+                            # 'realm',
+                            character_out.append(character_json['realm'])
+                            # 'region',
+                            character_out.append(nation)
+                            # 'locale',
+                            character_out.append(locale)
+                            # 'class',
+                            character_out.append(character_json['class'])
+                            # 'level',
+                            character_out.append(character_json['level'])
+                            # 'race',
+                            character_out.append(character_json['race'])
+                            # 'gender',
+                            character_out.append(character_json['gender'])
+                            # 'achievementPoints',
+                            character_out.append(character_json['achievementPoints'])
+                            # 'firstTimestamp',
+                            for i in sorted(character_json['achievements']['achievementsCompletedTimestamp']):
+                                if i > 0:
+                                    character_out.append(i)
+                                    break
+                            # 'lastModified',
+                            character_out.append(character_json['lastModified'])
+
+                            # 'TimestampLv10-110',
+                            for achievement in leveling_achievements_id_names:
+                                try:
+                                    index = character_json['achievements']['achievementsCompleted'].index(achievement)
+                                    # for low levels this difference can be 0
+                                    character_out.append(
+                                        character_json['achievements']['achievementsCompletedTimestamp'][index])
+                                except ValueError:
+                                    # achievement not completed
+                                    character_out.append(None)
+                                    continue
+
+                            # Write character data into file
+                            writer.writerow(character_out)
+                        except KeyError as err:
+                            logging.warning('KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                            logging.warning(str(os.path.join(CHARACTER_PATH, file)))
+                    except json.decoder.JSONDecodeError as err:
+                        # Probable incomplete or wrongly downloaded data, retry
+                        logging.warning(
+                            'JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                        logging.warning(str(os.path.join(CHARACTER_PATH, file)))
+                        continue
+    return
+
+
+def one_pass_characters(output_path, locations):
+    """ Retrieve all the information required with a single scan of the whole DB.
+        Build a DB in a single file with just the relevant info of all the characters"""
+    logging.info('one_pass_characters()')
+
+    with open(output_path, 'w', newline='', encoding='utf-8') as output_file:
+        writer = csv.writer(output_file)
+        writer.writerow(
+            ['name', 'realm', 'region', 'locale', 'class', 'level', 'race', 'gender', 'achievementPoints',
+             'firstTimestamp', 'lastModified', 'TimestampLv10', 'TimestampLv20', 'TimestampLv30',
+             'TimestampLv40',
+             'TimestampLv50', 'TimestampLv60', 'TimestampLv70', 'TimestampLv80', 'TimestampLv85',
+             'TimestampLv90',
+             'TimestampLv100', 'TimestampLv110'])
+        for nation in locations:
+            for locale in nation:
+                # PATHs
+                DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, nation, locale)
+                CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
+
+                ACHIEVEMENTS_PATH = os.path.join(DB_LOCALE_PATH, 'data', 'character', 'achievements')
+                # maps achievements id to their natural language name
+                leveling_achievements_id_names = {}
+                # Find all leveling achievements
+                with open(os.path.join(ACHIEVEMENTS_PATH, 'achievements.json')) as achievements_file:
+                    try:
+                        achievements_json = json.load(achievements_file)
+                        try:
+                            # achievements_json['achievements'][0] -> id=92
+                            for i in achievements_json['achievements'][0]['achievements'][0:12]:
+                                leveling_achievements_id_names[i['id']] = i['icon']
+                        except KeyError as err:
+                            logging.warning('KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                            logging.warning(str(os.path.join(ACHIEVEMENTS_PATH, 'achievements.json')))
+                    except json.decoder.JSONDecodeError as err:
+                        # Probable incomplete or wrongly downloaded data, retry
+                        logging.warning(
+                            'JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                        logging.warning(str(os.path.join(ACHIEVEMENTS_PATH, 'achievements.json')))
+
+                # Characters
+                with tqdm(total=len(os.listdir(CHARACTER_PATH))) as pbar:
+                    for file in os.listdir(CHARACTER_PATH):
+                        pbar.update(1)
+                        if not file.endswith('.json'):
+                            continue
+                        with open(os.path.join(CHARACTER_PATH, file)) as character_file:
+                            try:
+                                character_json = json.load(character_file)
+                                try:
+                                    character_out = []
+                                    # 'name',
+                                    character_out.append(character_json['name'])
+                                    # 'realm',
+                                    character_out.append(character_json['realm'])
+                                    # 'region',
+                                    character_out.append(nation)
+                                    # 'locale',
+                                    character_out.append(locale)
+                                    # 'class',
+                                    character_out.append(character_json['class'])
+                                    # 'level',
+                                    character_out.append(character_json['level'])
+                                    # 'race',
+                                    character_out.append(character_json['race'])
+                                    # 'gender',
+                                    character_out.append(character_json['gender'])
+                                    # 'achievementPoints',
+                                    character_out.append(character_json['achievementPoints'])
+                                    # 'firstTimestamp',
+                                    for i in sorted(character_json['achievements']['achievementsCompletedTimestamp']):
+                                        if i > 0:
+                                            character_out.append(i)
+                                            break
+                                    # 'lastModified',
+                                    character_out.append(character_json['lastModified'])
+
+                                    # 'TimestampLv10-110',
+                                    for achievement in leveling_achievements_id_names:
+                                        try:
+                                            index = character_json['achievements']['achievementsCompleted'].index(
+                                                achievement)
+                                            # for low levels this difference can be 0
+                                            character_out.append(
+                                                character_json['achievements']['achievementsCompletedTimestamp'][index])
+                                        except ValueError:
+                                            # achievement not completed
+                                            character_out.append(None)
+                                            continue
+
+                                    # Write character data into file
+                                    writer.writerow(character_out)
+                                except KeyError as err:
+                                    logging.warning(
+                                        'KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                                    logging.warning(str(os.path.join(CHARACTER_PATH, file)))
+                            except json.decoder.JSONDecodeError as err:
+                                # Probable incomplete or wrongly downloaded data, retry
+                                logging.warning(
+                                    'JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                                logging.warning(str(os.path.join(CHARACTER_PATH, file)))
+                                continue
+    return
+
+
+###############################################
 # STATS
 ##############
 # TODO separe functions in RETRIEVE/GENERATE and GET :
 #   the former scan the DB and create a file with the interested data, the latter just scan that file
 ##############
-
-def one_pass_locale(nation, locale):
-    """ Retrieve all the information required with a single scan of the DB for the given locale"""
-    logging.info('one_pass_locale(' + nation + ', ' + locale + ')')
-    result = {
-        'number_players': 0,
-        'number_distinct_players': 0,
-        'characters_ranking': []
-    }
-    # PATHs
-    DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, nation, locale)
-    CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
-
-    # immediate
-    result['number_players'] = len(os.listdir(CHARACTER_PATH))
-    result['number_distinct_players'] = len(set(os.listdir(CHARACTER_PATH)))
-
-    ### SCANS
-    # Characters
-    with tqdm(total=len(os.listdir(CHARACTER_PATH))) as pbar:
-        for file in os.listdir(CHARACTER_PATH):
-            pbar.update(1)
-            if not file.endswith('.json'):
-                continue
-            with open(os.path.join(CHARACTER_PATH, file)) as character_file:
-                try:
-                    character_json = json.load(character_file)
-                    try:
-                        # INFO RETRIEVAL HERE
-                        # RANKING
-
-
-                        pass
-                    except KeyError as err:
-                        logging.warning('KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
-                        logging.warning(str(os.path.join(CHARACTER_PATH, file)))
-                except json.decoder.JSONDecodeError as err:
-                    # Probable incomplete or wrongly downloaded data, retry
-                    logging.warning('JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
-                    logging.warning(str(os.path.join(CHARACTER_PATH, file)))
-                    continue
-
-    return result
-
 
 def number_of_players_retrieved_total() -> int:
     """ Returns the number of players that have been retrieved from the API"""
@@ -833,8 +997,8 @@ def avg_leveling_playtime(nation, locale):
 ###############################################
 # FREQUENT ITEMSET
 ##############
-# TODO
 # character field: "items"
+# TODO
 # next: mounts, pets, petSlots
 # GRANULARITY per nation, level
 ##############
@@ -1023,12 +1187,13 @@ def main():
     # print('corrupted json files: ' + str(clean_json_dataset()))
     # Removed corrupted characters json files
     # print('files moved : ' + str(clean_characters_dataset('EU', 'it_IT')))
+    one_pass_characters_locale('EU', 'it_IT', 'ita_DB_test.csv')
 
     #### SIMPLE ANALYTICAL STUFF
     print('===SIMPLE ANALYSIS')
 
-    # print('total #players:' + str(number_of_players_retrieved_total()))
-    # print('distinct total #players:' + str(number_of_distinct_players_retrieved_total()))
+    print('total #players:' + str(number_of_players_retrieved_total()))
+    print('distinct total #players:' + str(number_of_distinct_players_retrieved_total()))
     # print(number_of_players_retrieved_per_nation())
     # print(number_of_distinct_players_retrieved_per_nation())
     # print(number_of_players_retrieved_per_locale())
@@ -1127,6 +1292,7 @@ def main():
 
     #### SIMILARITY
     print('===SIMILARITY')
+
 
 if __name__ == "__main__":
     main()
