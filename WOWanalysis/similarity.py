@@ -29,9 +29,9 @@ def characters_stats_max_min_mean(DB_BASE_PATH, locations):
     stats_num = 49 - 1
     characters_num = 0
     # "powerType" is skipped
-    for nation in locations:
-        for locale in locations[nation]:
-            DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, nation, locale)
+    for region in locations:
+        for locale in locations[region]:
+            DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, region, locale)
             CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
             with tqdm(total=len(os.listdir(CHARACTER_PATH))) as pbar:
                 for file in os.listdir(CHARACTER_PATH):
@@ -75,7 +75,7 @@ def characters_stats_max_min_mean(DB_BASE_PATH, locations):
 
     return maximum, minimum, mean
 
-
+# TODO generate single files containing all the items, pets , mounts,... so to speed up processing
 ###############################################
 # GENERAL DISTANCE FUNCTIONS
 ##############

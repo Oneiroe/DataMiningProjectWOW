@@ -288,11 +288,11 @@ def a_priori(input_file, output_file, threshold):
 ###############################################
 # PREPROCESSING
 ##############
-def create_nation_characters_itemsets(nation, locale, DB_BASE_PATH, output):
+def create_locale_characters_itemsets(region, locale, DB_BASE_PATH, output):
     """ Create a file containing only players items itemset for the given locale """
-    logging.debug('create_nation_characters_itemsets(' + nation + ', ' + locale + ')')
+    logging.debug('create_locale_characters_itemsets(' + region + ', ' + locale + ')')
 
-    DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, nation, locale)
+    DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, region, locale)
     CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
     ITEM_CLASSES_PATH = os.path.join(DB_LOCALE_PATH, 'data', 'item', 'item_classes.json')
     fields_to_skip = {'averageItemLevel', 'averageItemLevelEquipped'}
@@ -329,9 +329,9 @@ def create_nation_characters_itemsets(nation, locale, DB_BASE_PATH, output):
                         continue
 
 
-def join_nations_characters_itemets(results_path, output_path):
+def join_locales_characters_itemets(results_path, output_path):
     """ Join in a single file the itemsets of al the locales """
-    logging.debug('join_nations_characters_itemets()')
+    logging.debug('join_locales_characters_itemets()')
     with tqdm(total=12) as pbar:
         with open(output_path, 'w') as outfile:
             for file in os.listdir(results_path):
@@ -347,18 +347,18 @@ def join_nations_characters_itemets(results_path, output_path):
                             outfile.write(line)
 
 
-def create_level_nation_characters_itemsets(nation, locale, DB_BASE_PATH, output_base_path):
+def create_level_locale_characters_itemsets(region, locale, DB_BASE_PATH, output_base_path):
     """ Create players' items itemsets from the given locale, grouping per level (10 lv per group) """
-    logging.debug('create_level_nation_characters_itemsets(' + nation + ', ' + locale + ')')
+    logging.debug('create_level_locale_characters_itemsets(' + region + ', ' + locale + ')')
 
-    DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, nation, locale)
+    DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, region, locale)
     CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
     ITEM_CLASSES_PATH = os.path.join(DB_LOCALE_PATH, 'data', 'item', 'item_classes.json')
     fields_to_skip = {'averageItemLevel', 'averageItemLevelEquipped'}
     # fields=set()
     # PREPROCESSING
     output_array = [
-        open(os.path.join(output_base_path, 'itemsets_' + nation + '_' + locale + '_lv_' + str(level) + '.dat'), 'w')
+        open(os.path.join(output_base_path, 'itemsets_' + region + '_' + locale + '_lv_' + str(level) + '.dat'), 'w')
         for level in range(0, 111, 10)]
     with tqdm(total=len(os.listdir(CHARACTER_PATH))) as pbar:
         for file in os.listdir(CHARACTER_PATH):
@@ -395,9 +395,9 @@ def create_level_nation_characters_itemsets(nation, locale, DB_BASE_PATH, output
         i.close()
 
 
-def join_level_nations_characters_itemets(results_path, output_base_path):
+def join_level_locale_characters_itemets(results_path, output_base_path):
     """ Join in a single files the itemsets of all the locales per lavel"""
-    logging.debug('join_level_nations_characters_itemets()')
+    logging.debug('join_level_locale_characters_itemets()')
     output_array = [
         open(os.path.join(output_base_path, 'total_itemsets_lv_' + str(level) + '.dat'), 'w')
         for level in range(0, 111, 10)]
@@ -418,11 +418,11 @@ def join_level_nations_characters_itemets(results_path, output_base_path):
         i.close()
 
 
-def create_class_level_nation_characters_itemsets(nation, locale, DB_BASE_PATH, output_base_path):
+def create_class_level_locale_characters_itemsets(region, locale, DB_BASE_PATH, output_base_path):
     """ Create players' items itemsets from the given locale, grouping per class and level (10 lv per group) """
-    logging.debug('create_class_level_nation_characters_itemsets(' + nation + ', ' + locale + ')')
+    logging.debug('create_class_level_locale_characters_itemsets(' + region + ', ' + locale + ')')
 
-    DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, nation, locale)
+    DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, region, locale)
     CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
     ITEM_CLASSES_PATH = os.path.join(DB_LOCALE_PATH, 'data', 'item', 'item_classes.json')
     fields_to_skip = {'averageItemLevel', 'averageItemLevelEquipped'}
@@ -450,7 +450,7 @@ def create_class_level_nation_characters_itemsets(nation, locale, DB_BASE_PATH, 
     for character_class in classes:
         output_map[character_class] = [
             open(os.path.join(output_base_path,
-                              'itemsets_' + nation + '_' + locale + '_lv_' + str(level) + '_class_' + str(
+                              'itemsets_' + region + '_' + locale + '_lv_' + str(level) + '_class_' + str(
                                   character_class) + '.dat'), 'w') for level in range(0, 111, 10)]
     with tqdm(total=len(os.listdir(CHARACTER_PATH))) as pbar:
         for file in os.listdir(CHARACTER_PATH):
@@ -489,9 +489,9 @@ def create_class_level_nation_characters_itemsets(nation, locale, DB_BASE_PATH, 
             i.close()
 
 
-def join_class_level_nations_characters_itemets(results_path, output_base_path, classes):
+def join_class_level_locale_characters_itemets(results_path, output_base_path, classes):
     """ Join in a single files the itemsets of all the locales per class and  lavel"""
-    logging.debug('join_class_level_nations_characters_itemets()')
+    logging.debug('join_class_level_locale_characters_itemets()')
 
     output_map = {}
     for character_class in classes:
@@ -518,8 +518,8 @@ def join_class_level_nations_characters_itemets(results_path, output_base_path, 
             i.close()
 
 
-def create_all_itemsets_one_pass(nations_map, DB_BASE_PATH, output_base_path, classes):
-    """ Create all the itemsets (general, total, per nation, level, class,...) scanning the dataset only once. """
+def create_all_itemsets_one_pass(locales_map, DB_BASE_PATH, output_base_path, classes):
+    """ Create all the itemsets (general, total, per locale, level, class,...) scanning the dataset only once. """
     # TODO
     return
 
