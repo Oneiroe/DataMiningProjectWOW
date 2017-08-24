@@ -13,6 +13,9 @@
 # Analitical results and support files
 /Results/
 
+# Settings file
+SETTINGS.json
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
