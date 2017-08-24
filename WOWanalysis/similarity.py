@@ -11,11 +11,72 @@ import os
 import logging
 from tqdm import tqdm
 import json
+import csv
 
 
 ###############################################
 # PREPROCESSING
 ##############
+
+def characters_stats_max_min_mean(DB_BASE_PATH, locations):
+    """ Find the max, min and mean values of characters stats, looking in the whole dataset """
+    logging.debug('characters_stats_max_min_mean()')
+    maximum = {}
+    minimum = {}
+    mean = {}
+    stats_num = 49 - 1
+    characters_num = 0
+    # "powerType" is skipped
+    for nation in locations:
+        for locale in locations[nation]:
+            DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, nation, locale)
+            CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
+            with tqdm(total=len(os.listdir(CHARACTER_PATH))) as pbar:
+                for file in os.listdir(CHARACTER_PATH):
+                    pbar.update(1)
+                    if not file.endswith('.json'):
+                        continue
+                    with open(os.path.join(CHARACTER_PATH, file)) as character_file:
+                        try:
+                            character_json = json.load(character_file)
+                            try:
+                                characters_num += 1
+                                for stat in character_json['stats']:
+                                    if stat == 'powerType':
+                                        continue
+                                    maximum[stat] = max(maximum.setdefault(stat, character_json['stats'][stat]),
+                                                        character_json['stats'][stat])
+                                    minimum[stat] = min(minimum.setdefault(stat, character_json['stats'][stat]),
+                                                        character_json['stats'][stat])
+                                    mean[stat] = mean.setdefault(stat, 0) + character_json['stats'][stat]
+                            except KeyError as err:
+                                logging.warning(
+                                    'KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                                logging.warning(str(os.path.join(CHARACTER_PATH, file)))
+                        except json.decoder.JSONDecodeError as err:
+                            # Probable incomplete or wrongly downloaded data, retry
+                            logging.warning(
+                                'JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                            logging.warning(str(os.path.join(CHARACTER_PATH, file)))
+                            continue
+    for stat in mean:
+        mean[stat] = mean[stat] / characters_num
+
+    # print(str(maximum))
+    # print(str(minimum))
+    # print(str(mean))
+    with open(os.path.join('Results', 'character_max_stats.csv'), 'w', newline='', encoding='utf-8') as output:
+        writer = csv.writer(output)
+        writer.writerow(['STAT', 'MAX', 'MIN', 'MEAN'])
+        for stat in maximum:
+            writer.writerow([stat, maximum[stat], minimum[stat], mean[stat]])
+
+    return maximum, minimum, mean
+
+
+def max_distance(vector_max, vector_min):
+    """ Retrieve the maximal distance between two characters: MAX + MIN + MAX/1000 """
+    return euclidean_distance(vector_max, vector_min)
 
 
 ###############################################
@@ -47,6 +108,15 @@ def euclidean_distance(vector_1, vector_2):
     return math.sqrt(sum(pow(a - b, 2) for a, b in zip(vector_1, vector_2)))
 
 
+def euclidean_distance_normalized(stats_1, stats_2, max_distance):
+    """ Normalized Euclidean distance according to max stats found in the dataset. Returns value between 0 and 1 """
+    # euclidean distance normalized over the maximal distance possible
+    distance = math.sqrt(sum(pow(a - b, 2) for a, b in zip(stats_1, stats_2)))
+    if max_distance != 0:
+        distance = distance / max_distance
+    return distance
+
+
 ###############################################
 # CHARACTERS DISTANCE FUNCTIONS
 ##############
@@ -72,7 +142,7 @@ def distance_appearance(character_1_json_path, character_2_json_path):
             # logging.warning(str(os.path.join(CHARACTER_PATH, file)))
             logging.warning('JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
     # Normalization 0<=distance<=1
-    # distance = distance/8
+    distance = distance / len(list(appearance_1.values()))
     return distance
 
 
@@ -135,7 +205,7 @@ def distance_mounts(character_1_json_path, character_2_json_path):
     return distance
 
 
-# TODO pets can be consistently personalized
+# TODO pets can be consistently personalized, not just owned
 def distance_pets(character_1_json_path, character_2_json_path):
     """ Return the distance measure between the two given characters according to their "pets" fields """
     logging.debug('distance_pets(' + str(character_1_json_path) + ', ' + str(character_2_json_path) + ')')
@@ -223,6 +293,36 @@ def distance_stats(character_1_json_path, character_2_json_path):
     return distance
 
 
+def distance_stats_normalized(character_1_json_path, character_2_json_path, max_distance):
+    """ Return the distance measure between the two given characters according to their "stats" fields """
+    logging.debug('distance_stats(' + str(character_1_json_path) + ', ' + str(character_2_json_path) + ')')
+    distance = 0.0
+    with open(os.path.join(character_1_json_path)) as character_1_file, open(
+            os.path.join(character_2_json_path)) as character_2_file:
+        try:
+            character_1_json = json.load(character_1_file)
+            character_2_json = json.load(character_2_file)
+            try:
+                stats_1 = character_1_json['stats']
+                stats_1.pop('powerType')
+                stats_1 = list(stats_1.values())
+                stats_2 = character_2_json['stats']
+                stats_2.pop('powerType')
+                stats_2 = list(stats_2.values())
+                # Normalization 0<=distance<=1
+                distance = euclidean_distance_normalized(stats_1, stats_2, max_distance)
+
+
+            except KeyError as err:
+                logging.warning('KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+            except ValueError as err:
+                logging.warning('ValueError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+        except json.decoder.JSONDecodeError as err:
+            # logging.warning(str(os.path.join(CHARACTER_PATH, file)))
+            logging.warning('JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+    return distance
+
+
 def distance_talents(character_1_json_path, character_2_json_path):
     """ Return the distance measure between the two given characters according to their "talents" fields """
     logging.debug('distance_talents(' + str(character_1_json_path) + ', ' + str(character_2_json_path) + ')')
@@ -260,7 +360,15 @@ def distance_talents(character_1_json_path, character_2_json_path):
 # TEST-MAIN
 ##############
 def main():
-    pass
+    DB_BASE_PATH = os.path.join(os.getcwd(), 'DB', 'WOW')
+    locations = {
+        'EU': ['en_GB', 'de_DE', 'es_ES', 'fr_FR', 'it_IT', 'pt_PT', 'ru_RU'],
+        'KR': ['ko_KR'],
+        'TW': ['zh_TW'],
+        'US': ['en_US', 'pt_BR', 'es_MX']
+    }
+
+    maximum, minimum, mean = characters_stats_max_min_mean(DB_BASE_PATH, locations)
 
 
 if __name__ == "__main__":
