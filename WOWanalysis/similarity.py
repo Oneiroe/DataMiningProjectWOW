@@ -14,6 +14,7 @@ import json
 import csv
 import numpy as np
 import matplotlib.pyplot as plt
+import pickle
 
 
 ###############################################
@@ -27,8 +28,8 @@ def characters_stats_max_min_mean(DB_BASE_PATH, locations):
     minimum = {}
     mean = {}
     stats_num = 49 - 1
-    characters_num = 0
     # "powerType" is skipped
+    characters_num = 0
     for region in locations:
         for locale in locations[region]:
             DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, region, locale)
@@ -75,6 +76,123 @@ def characters_stats_max_min_mean(DB_BASE_PATH, locations):
 
     return maximum, minimum, mean
 
+
+def one_pass_characters_info_to_file(DB_BASE_PATH, locations, output_path):
+    """ create one file DB with all and only the relevant info regarding distance measure """
+    logging.debug('one_pass_characters_info_to_file()')
+    # TODO to be sure write at the same time in csv, json, pickle, sqLite
+
+    # this will be serialized as pickle
+    # key:region+'_'+locale+'_'+character file name, value map similar to the json
+    map_output = {}
+
+    # sqLite database handler to output
+    # sqlite_output_handler = None
+
+    # with open(output_path, 'w', newline='', encoding='utf-8') as output_file:
+    #     writer = csv.writer(output_file)
+    #     writer.writerow(['file_name', ])
+    # INDEX range : DISTANCE ARGUMENT
+    # 0 : character file name
+    # 1-x : character_appearance
+    # a-b : items
+    # a-b : mounts
+    # a-b : pets
+    # a-b : professions
+    # a-b : stats
+    # a-b : talents
+    for region in locations:
+        for locale in locations[region]:
+            logging.debug('one_pass_characters_info_to_file() [' + region + ',' + locale + ']')
+            DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, region, locale)
+            CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
+
+            # Utils
+            items_fields_to_skip = {'averageItemLevel', 'averageItemLevelEquipped'}
+
+            with tqdm(total=len(os.listdir(CHARACTER_PATH))) as pbar:
+                for file in os.listdir(CHARACTER_PATH):
+                    pbar.update(1)
+                    if not file.endswith('.json'):
+                        continue
+                    with open(os.path.join(CHARACTER_PATH, file)) as character_file:
+                        try:
+                            character_json = json.load(character_file)
+                            try:
+                                # APPEARANCE
+                                character_appearance = list(character_json['appearance'].values())
+
+                                # ITEMS
+                                character_items = set()
+                                for field in character_json['items']:
+                                    if field in items_fields_to_skip:
+                                        continue
+                                    character_items.add(character_json['items'][field]['id'])
+
+                                # MOUNTS
+                                character_mounts = set()
+                                for mount in character_json['mounts']['collected']:
+                                    character_mounts.add(mount['creatureId'])
+
+                                # PETS
+                                character_pets = set()
+                                for pet in character_json['pets']['collected']:
+                                    character_pets.add(pet['creatureId'])
+
+                                # PROFESSIONS
+                                character_professions = set()
+                                for primary_profession in character_json['professions']['primary']:
+                                    character_professions.add(primary_profession['id'])
+                                for secondary_profession in character_json['professions']['secondary']:
+                                    character_professions.add(secondary_profession['id'])
+
+                                # STATS (normalized)
+                                character_stats = character_json['stats']
+                                character_stats.pop('powerType')
+                                character_stats = list(character_stats.values())
+
+                                # TALENTS
+                                character_talents = set()
+                                for category in character_json['talents']:
+                                    for talent in category['talents']:
+                                        if talent is not None:
+                                            character_talents.add(talent['spell']['id'])
+
+                                # write output
+                                map_output[region + '_' + locale + '_' + file] = {
+                                    'appearance': character_appearance,
+                                    'items': character_items,
+                                    'mounts': character_mounts,
+                                    'pets': character_pets,
+                                    'professions': character_professions,
+                                    'stats': character_stats,
+                                    'talents': character_talents
+                                }
+                            except KeyError as err:
+                                logging.warning(
+                                    'KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                                logging.warning(str(os.path.join(CHARACTER_PATH, file)))
+                            except ValueError as err:
+                                logging.warning(
+                                    'ValueError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                        except json.decoder.JSONDecodeError as err:
+                            # Probable incomplete or wrongly downloaded data, retry
+                            logging.warning(
+                                'JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+                            logging.warning(str(os.path.join(CHARACTER_PATH, file)))
+                            continue
+
+    # serialize to pickle
+    logging.debug('one_pass_characters_info_to_file(): serializing to pickle')
+    tstamp = time.time()
+    pickle_output_path = os.path.join(output_path, 'serialized_character_map.pickle')
+    with open(pickle_output_path, 'wb') as f:
+        pickle.dump(map_output, f, pickle.HIGHEST_PROTOCOL)
+    print('Time to serialize pickle: ' + str(time.time() - tstamp))
+
+    return
+
+
 # TODO generate single files containing all the items, pets , mounts,... so to speed up processing
 ###############################################
 # GENERAL DISTANCE FUNCTIONS
@@ -82,20 +200,24 @@ def characters_stats_max_min_mean(DB_BASE_PATH, locations):
 
 def jaccard_distance(set_1, set_2):
     """ Jaccard distance is 1 minus the ratio of the sizes of the intersection and union of set_1 and set_2 """
-    logging.debug('jaccard_distance(' + str(set_1) + ', ' + str(set_2) + ')')
-    if len(set_1.union(set_2)) == 0:
+    # logging.debug('jaccard_distance(' + str(set_1) + ', ' + str(set_2) + ')')
+    # if len(set_1.union(set_2)) == 0:
+    #     return 0
+    try:
+        return 1 - len(set_1.intersection(set_2)) / len(set_1.union(set_2))
+    except ZeroDivisionError:
         return 0
-    return 1 - len(set_1.intersection(set_2)) / len(set_1.union(set_2))
 
 
 def hamming_distance(vector_1, vector_2):
     """ The Hamming distance between two vectors is the number of components in which they differ. """
-    logging.debug('hamming_distance(' + str(vector_1) + ', ' + str(vector_2) + ')')
-    if len(vector_1) != len(vector_2):
-        raise ValueError('Different Vector Sizes')
+    # logging.debug('hamming_distance(' + str(vector_1) + ', ' + str(vector_2) + ')')
 
     distance = len(vector_1)
-    for i in range(len(vector_1)):
+    if distance != len(vector_2):
+        raise ValueError('Different Vector Sizes')
+
+    for i in range(distance):
         if vector_1[i] == vector_2[i]:
             distance -= 1
     return distance
@@ -117,7 +239,7 @@ def euclidean_distance_normalized(stats_1, stats_2, max_distance):
 
 
 ###############################################
-# CHARACTERS DISTANCE FUNCTIONS
+# CHARACTERS DISTANCE FUNCTIONS directly from JSONs
 ##############
 
 def distance_appearance(character_1_json_path, character_2_json_path):
@@ -369,7 +491,7 @@ def distance_general_inefficient(character_1_json_path, character_2_json_path):
 def distance_general(character_1_json_path, character_2_json_path):
     """ Return the average distance measure between the two given characters according to all the defined distances
     opening the files just once """
-    logging.debug('distance_general_one_pass(' + str(character_1_json_path) + ', ' + str(character_2_json_path) + ')')
+    # logging.debug('distance_general_one_pass(' + str(os.path.basename(character_1_json_path)) + ', ' + str(os.path.basename(character_2_json_path)) + ')')
     distance = 0.0
     distance_dimensions = 0  # how many distance functions are used
 
@@ -382,11 +504,10 @@ def distance_general(character_1_json_path, character_2_json_path):
             character_2_json = json.load(character_2_file)
             try:
                 # APPEARANCE
-                appearance_1 = character_1_json['appearance']
-                appearance_2 = character_2_json['appearance']
+                appearance_1 = list(character_1_json['appearance'].values())
+                appearance_2 = list(character_2_json['appearance'].values())
 
-                distance += hamming_distance(list(appearance_1.values()), list(appearance_2.values())) / len(
-                    list(appearance_1.values()))
+                distance += hamming_distance(appearance_1, appearance_2) / len(appearance_1)
                 distance_dimensions += 1
 
                 # ITEMS
@@ -480,6 +601,73 @@ def distance_general(character_1_json_path, character_2_json_path):
 
 
 ###############################################
+# CHARACTERS DISTANCE FUNCTIONS from serialized map
+##############
+def distance_general_from_map(character_1_map, character_2_map):
+    """ Return the average distance measure between the two given characters according to all the defined distances
+    opening the files just once """
+    # logging.debug('distance_general_from_map(' + str(os.path.basename(character_1_map)) + ', ' + str(os.path.basename(character_2_map)) + ')')
+    distance = 0.0
+    distance_dimensions = 0  # how many distance functions are used
+
+    # APPEARANCE
+    distance += hamming_distance(character_1_map['appearance'], character_2_map['appearance']) / len(
+        character_1_map['appearance'])
+    distance_dimensions += 1
+
+    # ITEMS
+    distance += jaccard_distance(character_1_map['items'], character_2_map['items'])
+    distance_dimensions += 1
+
+    # MOUNTS
+    distance += jaccard_distance(character_1_map['mounts'], character_2_map['mounts'])
+    distance_dimensions += 1
+
+    # PETS
+    distance += jaccard_distance(character_1_map['pets'], character_2_map['pets'])
+    distance_dimensions += 1
+
+    # PROFESSIONS
+    distance += jaccard_distance(character_1_map['professions'], character_2_map['professions'])
+    distance_dimensions += 1
+
+    # STATS (normalized)
+    distance += euclidean_distance_normalized(character_1_map['stats'],
+                                              character_2_map['stats'],
+                                              max_distance=5990271.526328605)
+    distance_dimensions += 1
+
+    # TALENTS
+    distance += jaccard_distance(character_1_map['talents'], character_2_map['talents'])
+    distance_dimensions += 1
+
+    return distance / distance_dimensions
+
+
+###############################################
+# ANALYSIS
+##############
+def distance_matrix(characters_list, distance_function, output_path):
+    """ Write a file containing the distance matrix (triangle) """
+    logging.debug('distance_matrix()')
+
+    # NAIVE SUPER VERY INEFFICIENT
+    characters_num = len(characters_list)
+    with open(output_path, 'w', newline='', encoding='utf-8') as output_file:
+        writer = csv.writer(output_file)
+        # writer.writerow([None] + [os.path.basename(x) for x in characters_list])
+        for i in range(characters_num):
+            # out_line = [os.path.basename(characters_list[i])] + [None for j in range(i)]
+            out_line = [None for j in range(i)]
+            with tqdm(total=characters_num - i) as pbar:
+                for j in range(i, characters_num):
+                    pbar.update(1)
+                    out_line += [distance_function(characters_list[i], characters_list[j])]
+            writer.writerow(out_line)
+    return
+
+
+###############################################
 # VISUALIZATION
 ##############
 def show_distance_matrix(characters_iterator, distance_function):
@@ -496,8 +684,8 @@ def main():
     ###############################################
     ####
     # LOG setup
-    logging.basicConfig(filename=os.path.join(os.getcwd(), 'LOG', 'similarity_DEBUG.log'),
-                        level=logging.DEBUG,
+    logging.basicConfig(filename=os.path.join(os.getcwd(), 'LOG', 'similarity_INFO.log'),
+                        level=logging.INFO,
                         format='%(asctime)-15s '
                                '%(levelname)s '
                                '--%(filename)s-- '
@@ -570,6 +758,31 @@ def main():
                          'versatilityDamageTakenBonus': 4.311471171076854,
                          'versatilityHealingDoneBonus': 8.622942339860389}
     stats_max_dist_global = 5990271.526328605
+
+    # locale = 'it_IT'
+    # region = 'EU'
+    # DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, region, locale)
+    # CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
+    # characters_iterator = list(
+    #     os.path.join(CHARACTER_PATH, x) for x in os.listdir(CHARACTER_PATH) if x.endswith('.json'))
+    # distance_matrix(characters_iterator[:25], distance_general, 'test_matrix.csv')
+
+    # one_pass_characters_info_to_file(DB_BASE_PATH, {'EU': ['it_IT']}, os.path.join(os.getcwd(), 'Results'))
+    # one_pass_characters_info_to_file(DB_BASE_PATH, locations, os.path.join(os.getcwd(), 'Results'))
+
+    t = time.time()
+    with open(os.path.join(os.getcwd(), 'Results', 'serialized_character_map.pickle'), 'rb') as f:
+        # The protocol version used is detected automatically, so we do not
+        # have to specify it.
+        characters_map = pickle.load(f)
+    print('Loading Time:' + str(time.time() - t))
+    distance_matrix(list(characters_map.values()), distance_general_from_map, 'test_matrix_global.csv')
+    # distance_matrix(list(characters_map.values())[:1000], distance_general_from_map, 'test_matrix.csv')
+    # show_distance_matrix(list(characters_map.values())[:100], distance_general_from_map)
+
+    #     wolfram alpha folmula for expectation, where sec=avg second to complete a full row
+    #     sum (n/(235888/sec)), 1<=n<=235888,sec=20
+#     TODO remove/resize the logging/profiling
 
 
 if __name__ == "__main__":

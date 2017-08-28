@@ -28,7 +28,7 @@ logging.basicConfig(filename=os.path.join(os.getcwd(), 'LOG', 'analyzer_DEBUG.lo
 
 DB_BASE_PATH = os.path.join(os.getcwd(), 'DB', 'WOW')
 
-location = {
+locations = {
     'EU': ['en_GB', 'de_DE', 'es_ES', 'fr_FR', 'it_IT', 'pt_PT', 'ru_RU'],
     'KR': ['ko_KR'],
     'TW': ['zh_TW'],
@@ -270,7 +270,10 @@ def one_pass_characters(output_path, locations):
         Build a DB in a single file with just the relevant info of all the characters"""
     logging.info('one_pass_characters()')
 
-    with open(output_path, 'w', newline='', encoding='utf-8') as output_file:
+    with open(os.path.join(output_path, 'CHARACTERS_DB_RELEVANT_GLOBAL.csv'),
+              'w',
+              newline='',
+              encoding='utf-8') as output_file:
         writer = csv.writer(output_file)
         writer.writerow(
             ['name', 'realm', 'region', 'locale', 'class', 'level', 'race', 'gender', 'achievementPoints',
@@ -280,10 +283,23 @@ def one_pass_characters(output_path, locations):
              'TimestampLv90',
              'TimestampLv100', 'TimestampLv110'])
         for region in locations:
-            for locale in region:
+            for locale in locations[region]:
+                logging.debug('one_pass_characters()...[' + region + ',' + locale + ']...')
                 # PATHs
                 DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, region, locale)
                 CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
+
+                locale_output_path = os.path.join(output_path,
+                                                  'CHARACTERS_DB_RELEVANT_' + region + '_' + locale + '.csv')
+                locale_output_file = open(locale_output_path, 'w', newline='', encoding='utf-8')
+                locale_writer = csv.writer(locale_output_file)
+                locale_writer.writerow(
+                    ['name', 'realm', 'region', 'locale', 'class', 'level', 'race', 'gender', 'achievementPoints',
+                     'firstTimestamp', 'lastModified', 'TimestampLv10', 'TimestampLv20', 'TimestampLv30',
+                     'TimestampLv40',
+                     'TimestampLv50', 'TimestampLv60', 'TimestampLv70', 'TimestampLv80', 'TimestampLv85',
+                     'TimestampLv90',
+                     'TimestampLv100', 'TimestampLv110'])
 
                 ACHIEVEMENTS_PATH = os.path.join(DB_LOCALE_PATH, 'data', 'character', 'achievements')
                 # maps achievements id to their natural language name
@@ -357,6 +373,7 @@ def one_pass_characters(output_path, locations):
 
                                     # Write character data into file
                                     writer.writerow(character_out)
+                                    locale_writer.writerow(character_out)
                                 except KeyError as err:
                                     logging.warning(
                                         'KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
@@ -367,6 +384,7 @@ def one_pass_characters(output_path, locations):
                                     'JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
                                 logging.warning(str(os.path.join(CHARACTER_PATH, file)))
                                 continue
+                locale_output_file.close()
     return
 
 
@@ -382,8 +400,8 @@ def number_of_players_retrieved_total() -> int:
     logging.debug('number_of_players_retrieved_total()')
 
     result = 0
-    for region in location:
-        for locale in location[region]:
+    for region in locations:
+        for locale in locations[region]:
             DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, region, locale)
             CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
             result += len(os.listdir(CHARACTER_PATH))
@@ -395,8 +413,8 @@ def number_of_distinct_players_retrieved_total() -> int:
     logging.debug('number_of_distinct_players_retrieved_total()')
 
     result_set = set()
-    for region in location:
-        for locale in location[region]:
+    for region in locations:
+        for locale in locations[region]:
             DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, region, locale)
             CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
             result_set.update(set(os.listdir(CHARACTER_PATH)))
@@ -412,8 +430,8 @@ def number_of_players_retrieved_per_region() -> dict:
     logging.debug('number_of_players_retrieved_per_region()')
 
     result = {'EU': 0, 'KR': 0, 'TW': 0, 'US': 0}
-    for region in location:
-        for locale in location[region]:
+    for region in locations:
+        for locale in locations[region]:
             DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, region, locale)
             CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
             result[region] += len(os.listdir(CHARACTER_PATH))
@@ -429,8 +447,8 @@ def number_of_distinct_players_retrieved_per_region() -> dict:
     logging.debug('number_of_distinct_players_retrieved_per_region()')
 
     result = {'EU': set(), 'KR': set(), 'TW': set(), 'US': set()}
-    for region in location:
-        for locale in location[region]:
+    for region in locations:
+        for locale in locations[region]:
             DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, region, locale)
             CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
             result[region].update(set(os.listdir(CHARACTER_PATH)))
@@ -448,8 +466,8 @@ def number_of_players_retrieved_per_locale() -> dict:
     logging.debug('number_of_players_retrieved_per_locale()')
 
     result = {}
-    for region in location:
-        for locale in location[region]:
+    for region in locations:
+        for locale in locations[region]:
             DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, region, locale)
             CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
             result[locale] = len(os.listdir(CHARACTER_PATH))
@@ -465,8 +483,8 @@ def number_of_distinct_players_retrieved_per_locale() -> dict:
     logging.debug('number_of_players_retrieved_per_locale()')
 
     result = {}
-    for region in location:
-        for locale in location[region]:
+    for region in locations:
+        for locale in locations[region]:
             DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, region, locale)
             CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
             result[locale] = set(os.listdir(CHARACTER_PATH))
@@ -1186,8 +1204,8 @@ def main():
     # print('corrupted json files: ' + str(clean_json_dataset()))
     # Removed corrupted characters json files
     # print('files moved : ' + str(clean_characters_dataset('EU', 'it_IT')))
-    one_pass_characters_locale('EU', 'it_IT', 'ita_DB_test.csv')
-
+    # one_pass_characters_locale('EU', 'it_IT', 'ita_DB_test.csv')
+    one_pass_characters(os.path.join('Results'), locations)
     #### SIMPLE ANALYTICAL STUFF
     print('===SIMPLE ANALYSIS')
 
@@ -1218,15 +1236,15 @@ def main():
     # print(avg_leveling_playtime('EU', 'it_IT'))
 
     # print(level_ranking('EU', 'it_IT'))
-    # for region in location:
-    #     for locale in location[region]:
+    # for region in locations:
+    #     for locale in locations[region]:
     #         level_ranking(region, locale)
 
     #### FREQUENT ITEMSET
     print('===FREQUENT ITEMSET')
     ### APRIORI GENERAL
-    # for region in location:
-    #     for locale in location[region]:
+    # for region in locations:
+    #     for locale in locations[region]:
     #         output_path = 'itemsets_' + region + '_' + locale + '.dat'
     #         my_apriori.create_locale_characters_itemsets(region, locale, DB_BASE_PATH, output_path)
     # my_apriori.join_locales_characters_itemets(os.path.join(os.getcwd(), 'Results'),
@@ -1237,16 +1255,16 @@ def main():
     #                                         0.001)
 
     ### APRIORI per LEVEL
-    # for region in location:
-    #     for locale in location[region]:
+    # for region in locations:
+    #     for locale in locations[region]:
     #         my_apriori.create_level_locale_characters_itemsets(region,
     #                                                            locale,
     #                                                            DB_BASE_PATH,
     #                                                            os.path.join(os.getcwd(), 'Results'))
     # my_apriori.join_level_locale_characters_itemets(os.path.join(os.getcwd(), 'Results'),
     #                                                  os.path.join(os.getcwd(), 'Results'))
-    # for region in location:
-    #     for locale in location[region]:
+    # for region in locations:
+    #     for locale in locations[region]:
     #         apriori_offline_frequent_itemsets_level_locale(region, locale, 0.01)
     # apriori_offline_frequent_itemsets_level_total(os.path.join(os.getcwd(), 'Results'),
     #                                               os.path.join(os.getcwd(), 'Results'),
@@ -1272,8 +1290,8 @@ def main():
     #         logging.warning('JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
     #         logging.warning(str(os.path.join(CLASS_PATH, 'classes.json')))
 
-    # for region in location:
-    #     for locale in location[region]:
+    # for region in locations:
+    #     for locale in locations[region]:
     #         my_apriori.create_class_level_locale_characters_itemsets(region,
     #                                                                  locale,
     #                                                                  DB_BASE_PATH,
@@ -1281,8 +1299,8 @@ def main():
     # my_apriori.join_class_level_locale_characters_itemets(os.path.join(os.getcwd(), 'Results'),
     #                                                        os.path.join(os.getcwd(), 'Results'),
     #                                                        classes)
-    # for region in location:
-    #     for locale in location[region]:
+    # for region in locations:
+    #     for locale in locations[region]:
     #         apriori_offline_frequent_itemsets_class_level_locale(region, locale, 0.01, classes)
     # apriori_offline_frequent_itemsets_class_level_total(os.path.join(os.getcwd(), 'Results'),
     #                                                     os.path.join(os.getcwd(), 'Results'),
