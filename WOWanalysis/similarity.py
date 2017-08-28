@@ -201,12 +201,16 @@ def one_pass_characters_info_to_file(DB_BASE_PATH, locations, output_path):
 def jaccard_distance(set_1, set_2):
     """ Jaccard distance is 1 minus the ratio of the sizes of the intersection and union of set_1 and set_2 """
     # logging.debug('jaccard_distance(' + str(set_1) + ', ' + str(set_2) + ')')
-    # if len(set_1.union(set_2)) == 0:
-    #     return 0
-    try:
-        return 1 - len(set_1.intersection(set_2)) / len(set_1.union(set_2))
-    except ZeroDivisionError:
+    inter_dim = len(set_1.intersection(set_2))
+    union_dim = len(set_1) + len(set_2) - inter_dim
+    # union_dim = len(set_1.union(set_2))
+    if union_dim == 0:
         return 0
+    else:
+        return 1 - inter_dim / union_dim
+        # return 1 - len(set_1.intersection(set_2)) / union_dim
+        # except ZeroDivisionError:
+        #     return 0
 
 
 def hamming_distance(vector_1, vector_2):
@@ -650,14 +654,14 @@ def distance_matrix(characters_list, distance_function, output_path):
     with open(output_path, 'w', newline='', encoding='utf-8') as output_file:
         writer = csv.writer(output_file)
         # writer.writerow([None] + [os.path.basename(x) for x in characters_list])
-        for i in range(characters_num):
-            # out_line = [os.path.basename(characters_list[i])] + [None for j in range(i)]
-            out_line = [None for j in range(i)]
-            with tqdm(total=characters_num - i) as pbar:
+        with tqdm(total=characters_num) as pbar:
+            for i in range(characters_num):
+                pbar.update(1)
+                # out_line = [os.path.basename(characters_list[i])] + [None for j in range(i)]
+                out_line = [None for j in range(i)]
                 for j in range(i, characters_num):
-                    pbar.update(1)
                     out_line += [distance_function(characters_list[i], characters_list[j])]
-            writer.writerow(out_line)
+                writer.writerow(out_line)
     return
 
 
@@ -771,12 +775,12 @@ def main():
         # have to specify it.
         characters_map = pickle.load(f)
     # print('Loading Time:' + str(time.time() - t))
-    distance_matrix(list(characters_map.values()), distance_general_from_map, 'test_matrix_global.csv')
-    # distance_matrix(list(characters_map.values())[:1000], distance_general_from_map, 'test_matrix.csv')
-    # show_distance_matrix(list(characters_map.values())[:100], distance_general_from_map)
+    # distance_matrix(list(characters_map.values()), distance_general_from_map, 'test_matrix_global.csv')
+    distance_matrix(list(characters_map.values())[:2000], distance_general_from_map, 'test_matrix.csv')
+    # show_distance_matrix(list(characters_map.values())[:1000], distance_general_from_map)
 
     #     wolfram alpha folmula for expectation, where sec=avg second to complete a full row
-    #     sum (n/(235888/sec)), 1<=n<=235888,sec=20
+    #     sum (n/(235888/x)), 1<=n<=235888,x=20
 
 
 #     TODO remove/resize the logging/profiling
