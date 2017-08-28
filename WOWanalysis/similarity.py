@@ -213,10 +213,10 @@ def hamming_distance(vector_1, vector_2):
     """ The Hamming distance between two vectors is the number of components in which they differ. """
     # logging.debug('hamming_distance(' + str(vector_1) + ', ' + str(vector_2) + ')')
 
-    distance = len(vector_1)
-    if distance != len(vector_2):
-        raise ValueError('Different Vector Sizes')
-
+    # len(vector_1)==len(vector_2)==8
+    distance = 8
+    # if distance != len(vector_2):
+    #     raise ValueError('Different Vector Sizes')
     for i in range(distance):
         if vector_1[i] == vector_2[i]:
             distance -= 1
@@ -232,10 +232,11 @@ def euclidean_distance(vector_1, vector_2):
 def euclidean_distance_normalized(stats_1, stats_2, max_distance):
     """ Normalized Euclidean distance according to max stats found in the dataset. Returns value between 0 and 1 """
     # euclidean distance normalized over the maximal distance possible
-    distance = math.sqrt(sum(pow(a - b, 2) for a, b in zip(stats_1, stats_2)))
-    if max_distance != 0:
-        distance = distance / max_distance
-    return distance
+    # distance = math.sqrt(sum(pow(a - b, 2) for a, b in zip(stats_1, stats_2)))
+    distance = np.linalg.norm(stats_1 - stats_2)
+    # if max_distance != 0:
+    #     distance = distance / max_distance
+    return distance / max_distance
 
 
 ###############################################
@@ -608,38 +609,31 @@ def distance_general_from_map(character_1_map, character_2_map):
     opening the files just once """
     # logging.debug('distance_general_from_map(' + str(os.path.basename(character_1_map)) + ', ' + str(os.path.basename(character_2_map)) + ')')
     distance = 0.0
-    distance_dimensions = 0  # how many distance functions are used
+    distance_dimensions = 7  # how many distance functions are used
 
     # APPEARANCE
-    distance += hamming_distance(character_1_map['appearance'], character_2_map['appearance']) / len(
-        character_1_map['appearance'])
-    distance_dimensions += 1
+    # len(character_1_map['appearance'])==8
+    distance += hamming_distance(character_1_map['appearance'], character_2_map['appearance']) / 8
 
     # ITEMS
     distance += jaccard_distance(character_1_map['items'], character_2_map['items'])
-    distance_dimensions += 1
 
     # MOUNTS
     distance += jaccard_distance(character_1_map['mounts'], character_2_map['mounts'])
-    distance_dimensions += 1
 
     # PETS
     distance += jaccard_distance(character_1_map['pets'], character_2_map['pets'])
-    distance_dimensions += 1
 
     # PROFESSIONS
     distance += jaccard_distance(character_1_map['professions'], character_2_map['professions'])
-    distance_dimensions += 1
 
     # STATS (normalized)
     distance += euclidean_distance_normalized(character_1_map['stats'],
                                               character_2_map['stats'],
                                               max_distance=5990271.526328605)
-    distance_dimensions += 1
 
     # TALENTS
     distance += jaccard_distance(character_1_map['talents'], character_2_map['talents'])
-    distance_dimensions += 1
 
     return distance / distance_dimensions
 
@@ -770,18 +764,21 @@ def main():
     # one_pass_characters_info_to_file(DB_BASE_PATH, {'EU': ['it_IT']}, os.path.join(os.getcwd(), 'Results'))
     # one_pass_characters_info_to_file(DB_BASE_PATH, locations, os.path.join(os.getcwd(), 'Results'))
 
-    t = time.time()
-    with open(os.path.join(os.getcwd(), 'Results', 'serialized_character_map.pickle'), 'rb') as f:
+    # t = time.time()
+    # with open(os.path.join(os.getcwd(), 'Results', 'serialized_character_map.pickle'), 'rb') as f:
+    with open(os.path.join(os.getcwd(), 'Results', 'serialized_character_map_numpy.pickle'), 'rb') as f:
         # The protocol version used is detected automatically, so we do not
         # have to specify it.
         characters_map = pickle.load(f)
-    print('Loading Time:' + str(time.time() - t))
+    # print('Loading Time:' + str(time.time() - t))
     distance_matrix(list(characters_map.values()), distance_general_from_map, 'test_matrix_global.csv')
     # distance_matrix(list(characters_map.values())[:1000], distance_general_from_map, 'test_matrix.csv')
     # show_distance_matrix(list(characters_map.values())[:100], distance_general_from_map)
 
     #     wolfram alpha folmula for expectation, where sec=avg second to complete a full row
     #     sum (n/(235888/sec)), 1<=n<=235888,sec=20
+
+
 #     TODO remove/resize the logging/profiling
 
 
