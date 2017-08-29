@@ -15,6 +15,9 @@ import csv
 import numpy as np
 import matplotlib.pyplot as plt
 import pickle
+import threading
+import multiprocessing
+from multiprocessing import Process, Pool, Value, Array, Lock, current_process
 
 
 ###############################################
@@ -645,11 +648,11 @@ def distance_general_from_map(character_1_map, character_2_map):
 ###############################################
 # ANALYSIS
 ##############
+# SEQUENTIAL
 def distance_matrix(characters_list, distance_function, output_path):
     """ Write a file containing the distance matrix (triangle) """
     logging.debug('distance_matrix()')
 
-    # NAIVE SUPER VERY INEFFICIENT
     characters_num = len(characters_list)
     with open(output_path, 'w', newline='', encoding='utf-8') as output_file:
         writer = csv.writer(output_file)
@@ -665,7 +668,83 @@ def distance_matrix(characters_list, distance_function, output_path):
     return
 
 
+##############
+# Multi Process
+
+def multiprocess_distance_app(i, character_pivot, character_list, output_queue, distance_function):
+    # with tqdm(total=len(character_list)) as pbar:
+    out_line = [None for j in range(i)]
+    for j in character_list:
+        # pbar.update(1)
+        out_line += [distance_function(character_pivot, j)]
+    output_queue.put(out_line)
+    return out_line
+
+
+def output_writer_listener(output_path, output_queue):
+    with open(output_path, 'a', newline='', encoding='utf-8') as output_file:
+        # with tqdm(total=235888) as pbar_out:
+        # with tqdm(total=2000) as pbar_out:
+        writer = csv.writer(output_file)
+        while 1:
+            m = output_queue.get()
+            if m == 'kill':
+                break
+            writer.writerow(m)
+            output_file.flush()
+            # pbar_out.update(1)
+
+
+def distance_matrix_multiprocessing(characters_list, distance_function, output_path):
+    """ Write a file containing the distance matrix (triangle) thorough multiprocessing """
+    logging.info('distance_matrix_multiprocessing()')
+
+    characters_num = len(characters_list)
+    manager = multiprocessing.Manager()
+    output_queue = manager.Queue()
+    #
+    # empty the output file
+    open(output_path, 'w', newline='', encoding='utf-8').close()
+
+    ### All dataset in memory before writing
+    with multiprocessing.Pool(multiprocessing.cpu_count()) as p:
+        watcher = p.apply_async(output_writer_listener, (output_path, output_queue))
+        row_pair_generator = ((i,
+                               characters_list[i],
+                               characters_list[i:characters_num],
+                               output_queue,
+                               distance_function) for i in range(characters_num))
+        p.starmap(multiprocess_distance_app, row_pair_generator)
+        # output_queue.put('kill')
+    return
+
+    ### CHUNCKED VERSION with map
+    # break_chunk = 1000
+    # with tqdm(total=characters_num) as pbar:
+    #     for j in range(0, characters_num, break_chunk):
+    #         # with multiprocessing.Pool(multiprocessing.cpu_count()) as p:
+    #         with multiprocessing.Pool(2) as p:
+    #             watcher = p.apply_async(output_writer_listener, (output_path, output_queue))
+    #             if j + break_chunk < characters_num:
+    #                 row_pair_generator = ((i,
+    #                                        characters_list[i],
+    #                                        characters_list[i:characters_num],
+    #                                        output_queue,
+    #                                        distance_function) for i in range(j, j + break_chunk))
+    #             else:
+    #                 row_pair_generator = ((i,
+    #                                        characters_list[i],
+    #                                        characters_list[i:characters_num],
+    #                                        output_queue,
+    #                                        distance_function) for i in range(j, characters_num))
+    #             p.starmap(multiprocess_distance_app, row_pair_generator)
+    #         pbar.update(break_chunk)
+    # return
+
+
 ###############################################
+
+
 # VISUALIZATION
 ##############
 def show_distance_matrix(characters_iterator, distance_function):
@@ -771,16 +850,25 @@ def main():
     # t = time.time()
     # with open(os.path.join(os.getcwd(), 'Results', 'serialized_character_map.pickle'), 'rb') as f:
     with open(os.path.join(os.getcwd(), 'Results', 'serialized_character_map_numpy.pickle'), 'rb') as f:
-        # The protocol version used is detected automatically, so we do not
-        # have to specify it.
         characters_map = pickle.load(f)
+    logging.info('Pickle dataset Loaded')
+    print('characters_map (bytes): ' + str(sys.getsizeof(characters_map)))
     # print('Loading Time:' + str(time.time() - t))
+    tstamp = time.time()
     # distance_matrix(list(characters_map.values()), distance_general_from_map, 'test_matrix_global.csv')
-    distance_matrix(list(characters_map.values())[:2000], distance_general_from_map, 'test_matrix.csv')
+    # distance_matrix(list(characters_map.values())[:2000], distance_general_from_map, 'test_matrix.csv')
+    # distance_matrix_multiprocessing(list(characters_map.values()), distance_general_from_map, 'test_matrix_global.csv')
+    distance_matrix_multiprocessing(list(characters_map.values())[:2000], distance_general_from_map, 'test_matrix.csv')
+    # distance_matrix_parallel_gym(list(characters_map.values()), distance_general_from_map, 'test_matrix_global.csv')
+    # distance_matrix_parallel_gym(list(characters_map.values())[:2000], distance_general_from_map, 'test_matrix.csv')
+    # distance_matrix_threading(list(characters_map.values())[:2000], distance_general_from_map, 'test_matrix.csv')
     # show_distance_matrix(list(characters_map.values())[:1000], distance_general_from_map)
 
     #     wolfram alpha folmula for expectation, where sec=avg second to complete a full row
     #     sum (n/(235888/x)), 1<=n<=235888,x=20
+    logging.info('END')
+    logging.info('Time:' + str(time.time() - tstamp))
+    logging.info('#################################################################################################')
 
 
 #     TODO remove/resize the logging/profiling
