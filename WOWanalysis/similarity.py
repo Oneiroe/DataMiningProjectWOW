@@ -196,6 +196,100 @@ def one_pass_characters_info_to_file(DB_BASE_PATH, locations, output_path):
     return
 
 
+def big_pickle_to_small_pickles(original_pickle_path, relevant_db_csv, outputh_base_path):
+    """ Makes smaller Pickle-DBs from the over all big one:
+    Unique over all, per Region,Per Locale, per class, per level, per class-level-90-100-110 """
+    logging.info('big_pickle_to_small_pickles()')
+    with open(os.path.join(os.getcwd(), 'Results', 'serialized_character_map_numpy.pickle'), 'rb') as f:
+        original_characters_map = pickle.load(f)
+    logging.info('Pickle dataset Loaded')
+
+    unique_map = {}
+
+    locations = {
+        'EU': ['en_GB', 'de_DE', 'es_ES', 'fr_FR', 'it_IT', 'pt_PT', 'ru_RU'],
+        'KR': ['ko_KR'],
+        'TW': ['zh_TW'],
+        'US': ['en_US', 'pt_BR', 'es_MX']
+    }
+
+    regions_map = {}
+    locales_map = {}
+    for region in locations:
+        regions_map[region] = {}
+        for locale in locations[region]:
+            locales_map[locale] = {}
+
+    # classes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    # classes_map = {}
+    # classes_app = {}
+    # for c in classes:
+    #     classes_map[c] = {}
+    #
+    # levels_map = {}
+    # levels_app = {}
+    # for i in range(111):
+    #     levels_map[i] = {}
+    #
+    # with open(relevant_db_csv, 'r', newline='', encoding='utf-8') as csv_file:
+    #     csv_file.readline()
+    #     reader = csv.reader(csv_file, delimiter=',')
+    #     for row in reader:
+    #         # print(row[1])
+    #         k = (row[2] + '_' + row[3] + '_' + row[0] + '[' + row[1] + '].json').lower().replace(' ', '-')
+    #         # print(k)
+    #         classes_app[k] = int(row[4])
+    #         levels_app[k] = int(row[5])
+    #
+    # logging.info('Maps initialized')
+
+    # Build maps
+    with tqdm(total=len(original_characters_map)) as pbar:
+        for character in original_characters_map:
+            pbar.update(1)
+            if len(character.split('_')) != 4:
+                print(character)
+            region, locale_a, locale_b, character_file = character.split('_')
+            locale = locale_a + '_' + locale_b
+            if character_file in unique_map:
+                if sys.getsizeof(unique_map[character_file]) < sys.getsizeof(original_characters_map[character]):
+                    unique_map[character_file] = original_characters_map[character]
+            else:
+                unique_map[character_file] = original_characters_map[character]
+            regions_map[region][character] = original_characters_map[character]
+            locales_map[locale][character] = original_characters_map[character]
+
+            # k = character.lower().replace(' ', '-')
+            # classes_map[classes_app[k]][character] = original_characters_map[character]
+            # levels_map[levels_app[k]][character] = original_characters_map[character]
+
+    ### Output
+    print('serializing unique_map')
+    pickle_output_path = os.path.join(outputh_base_path, 'serialized_character_map_numpy_unique.pickle')
+    with open(pickle_output_path, 'wb') as f:
+        pickle.dump(unique_map, f, pickle.HIGHEST_PROTOCOL)
+
+    print('serializing regions_map')
+    for region in locations:
+        pickle_output_path = os.path.join(outputh_base_path, 'serialized_character_map_numpy_' + region + '.pickle')
+        with open(pickle_output_path, 'wb') as f:
+            pickle.dump(regions_map[region], f, pickle.HIGHEST_PROTOCOL)
+
+    print('serializing locales_map')
+    for region in locations:
+        for locale in locations[region]:
+            pickle_output_path = os.path.join(outputh_base_path, 'serialized_character_map_numpy_' + locale + '.pickle')
+            with open(pickle_output_path, 'wb') as f:
+                pickle.dump(locales_map[locale], f, pickle.HIGHEST_PROTOCOL)
+    return
+
+
+# TODO
+def make_db_gpu_ready(original_pickle_path, outputh_pickle_path):
+    """ makes the serialized characters map ready to be directly analyzed in gpu"""
+    return
+
+
 # TODO generate single files containing all the items, pets , mounts,... so to speed up processing
 ###############################################
 # GENERAL DISTANCE FUNCTIONS
@@ -670,6 +764,8 @@ def distance_matrix(characters_list, distance_function, output_path):
 
 ##############
 # Multi Process
+# TODO fix scalability
+
 
 def multiprocess_distance_app(i, character_pivot, character_list, output_queue, distance_function):
     # with tqdm(total=len(character_list)) as pbar:
@@ -740,6 +836,91 @@ def distance_matrix_multiprocessing(characters_list, distance_function, output_p
     #             p.starmap(multiprocess_distance_app, row_pair_generator)
     #         pbar.update(break_chunk)
     # return
+
+
+######
+# Multi bo
+characters_list = []
+
+
+def gym_distance_app(i, characters_num, output_queue, distance_function):
+    # global characters_list
+    # with tqdm(total=len(character_list)) as pbar:
+    out_line = [None for j in range(i)]
+    for j in range(i, characters_num):
+        # pbar.update(1)
+        out_line += [distance_function(characters_list[i], characters_list[j])]
+    output_queue.put(out_line)
+    return out_line
+
+
+def gym_writer_listener(output_path, output_queue):
+    with open(output_path, 'a', newline='', encoding='utf-8') as output_file:
+        # with tqdm(total=235888) as pbar_out:
+        # with tqdm(total=2000) as pbar_out:
+        writer = csv.writer(output_file)
+        while 1:
+            m = output_queue.get()
+            if m == 'kill':
+                break
+            writer.writerow(m)
+            output_file.flush()
+            # pbar_out.update(1)
+
+
+def gym_init(c_list):
+    global characters_list
+    characters_list = c_list
+
+
+def distance_matrix_gym(distance_function, output_path):
+    """ Write a file containing the distance matrix (triangle) thorough multiprocessing """
+    logging.info('distance_matrix_gym()')
+
+    characters_num = len(characters_list)
+    manager = multiprocessing.Manager()
+    output_queue = manager.Queue()
+    #
+    # empty the output file
+    # open(output_path, 'w', newline='', encoding='utf-8').close()
+
+    ### CHUNCKED VERSION with map
+    # break_chunk = multiprocessing.cpu_count()
+    break_chunk = 100
+    with tqdm(total=characters_num) as pbar:
+        with open(output_path, 'w', newline='', encoding='utf-8') as output_file:
+            writer = csv.writer(output_file)
+            for j in range(0, characters_num, break_chunk):
+                # with multiprocessing.Pool(1, initializer=gym_init, initargs=(characters_list,)) as p:
+                with multiprocessing.Pool(2) as p:
+                    # watcher = p.apply_async(gym_writer_listener, (output_path, output_queue))
+                    if j + break_chunk < characters_num:
+                        row_pair_generator = ((i,
+                                               characters_num,
+                                               output_queue,
+                                               distance_function) for i in range(j, j + break_chunk))
+                    else:
+                        row_pair_generator = ((i,
+                                               characters_num,
+                                               output_queue,
+                                               distance_function) for i in range(j, characters_num))
+                    p.starmap(gym_distance_app, row_pair_generator)
+
+                for _ in range(break_chunk):
+                    writer.writerow(output_queue.get())
+
+                pbar.update(break_chunk)
+    return
+
+
+##############
+# GPU
+
+
+def distance_matrix_gpu(characters_list, distance_function, output_path):
+    """ Compute the distance matrix in parallel through the gpu """
+
+    return
 
 
 ###############################################
@@ -849,23 +1030,14 @@ def main():
 
     # t = time.time()
     # with open(os.path.join(os.getcwd(), 'Results', 'serialized_character_map.pickle'), 'rb') as f:
-    with open(os.path.join(os.getcwd(), 'Results', 'serialized_character_map_numpy.pickle'), 'rb') as f:
-        characters_map = pickle.load(f)
-    logging.info('Pickle dataset Loaded')
-    print('characters_map (bytes): ' + str(sys.getsizeof(characters_map)))
+    # with open(os.path.join(os.getcwd(), 'Results', 'serialized_character_map_numpy.pickle'), 'rb') as f:
+    #     characters_map = pickle.load(f)
+    # logging.info('Pickle dataset Loaded')
     # print('Loading Time:' + str(time.time() - t))
     tstamp = time.time()
-    # distance_matrix(list(characters_map.values()), distance_general_from_map, 'test_matrix_global.csv')
-    # distance_matrix(list(characters_map.values())[:2000], distance_general_from_map, 'test_matrix.csv')
-    # distance_matrix_multiprocessing(list(characters_map.values()), distance_general_from_map, 'test_matrix_global.csv')
-    distance_matrix_multiprocessing(list(characters_map.values())[:2000], distance_general_from_map, 'test_matrix.csv')
-    # distance_matrix_parallel_gym(list(characters_map.values()), distance_general_from_map, 'test_matrix_global.csv')
-    # distance_matrix_parallel_gym(list(characters_map.values())[:2000], distance_general_from_map, 'test_matrix.csv')
-    # distance_matrix_threading(list(characters_map.values())[:2000], distance_general_from_map, 'test_matrix.csv')
-    # show_distance_matrix(list(characters_map.values())[:1000], distance_general_from_map)
-
-    #     wolfram alpha folmula for expectation, where sec=avg second to complete a full row
-    #     sum (n/(235888/x)), 1<=n<=235888,x=20
+    big_pickle_to_small_pickles(os.path.join(os.getcwd(), 'Results', 'serialized_character_map_numpy.pickle'),
+                                os.path.join(os.getcwd(), 'Results', 'CHARACTERS_DB_RELEVANT_GLOBAL.csv'),
+                                os.path.join(os.getcwd(), 'Results', 'PICKLES'))
     logging.info('END')
     logging.info('Time:' + str(time.time() - tstamp))
     logging.info('#################################################################################################')
