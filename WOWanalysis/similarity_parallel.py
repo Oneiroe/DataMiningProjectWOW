@@ -15,6 +15,7 @@ import multiprocessing
 from multiprocessing import Process, Pool, Value, Array, Lock, current_process
 import psutil
 
+
 # TODO generate single files containing all the items, pets , mounts,... so to speed up processing
 ###############################################
 # GENERAL DISTANCE FUNCTIONS
@@ -155,7 +156,15 @@ def distance_matrix_multi(characters_list, distance_function, output_path):
     manager = multiprocessing.Manager()
     output_queue = manager.Queue()
     # with Pool(multiprocessing.cpu_count()) as p:
-    with Pool(4) as p:
+    logging.info('Available Memory (Mb): ' + str(psutil.virtual_memory().available / (1024 * 1024)))
+    logging.info('Process Size (Mb): ' + str(psutil.Process(os.getpid()).memory_info().rss / float(2 ** 20)))
+    logging.info('#Process fitting in memory: ' + str(int((psutil.virtual_memory().available / (1024 * 1024)) / (
+        psutil.Process(os.getpid()).memory_info().rss / float(2 ** 20))) + 1))
+    process_number = min(multiprocessing.cpu_count(),
+                         int((psutil.virtual_memory().available / (1024 * 1024)) / (
+                             psutil.Process(os.getpid()).memory_info().rss / float(2 ** 20))) + 1
+                         )
+    with Pool(process_number) as p:
         watcher = p.apply_async(output_writer_listener, (output_path, output_queue, len(characters_list)))
         row_pair_generator = ((i,
                                characters_list,
