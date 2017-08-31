@@ -200,7 +200,7 @@ def big_pickle_to_small_pickles(original_pickle_path, relevant_db_csv, outputh_b
     """ Makes smaller Pickle-DBs from the over all big one:
     Unique over all, per Region,Per Locale, per class, per level, per class-level-90-100-110 """
     logging.info('big_pickle_to_small_pickles()')
-    with open(os.path.join(os.getcwd(), 'Results', 'serialized_character_map_numpy.pickle'), 'rb') as f:
+    with open(original_pickle_path, 'rb') as f:
         original_characters_map = pickle.load(f)
     logging.info('Pickle dataset Loaded')
 
