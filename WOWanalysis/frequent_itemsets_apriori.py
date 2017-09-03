@@ -10,6 +10,7 @@ import os
 import logging
 from tqdm import tqdm
 import json
+import csv
 
 
 ###############################################
@@ -38,7 +39,7 @@ def a_priori_pass_1(input_file, threshold, output_file, bit_map):
                 item_count[item] = 1
 
     # filtering really frequent item element
-    threshold_number = len(item_count) * threshold
+    threshold_number = baskets_number * threshold
     # threshold_number = 0
     for elem in item_count:
         bit_map[elem] = 0
@@ -47,7 +48,7 @@ def a_priori_pass_1(input_file, threshold, output_file, bit_map):
             output_file.write(str(elem) + '\n')
             bit_map[elem] = 1
 
-    avg_basket_length = 0
+    # avg_basket_length = 0
     if baskets_number != 0:
         avg_basket_length = int(avg_basket_length / baskets_number)
 
@@ -58,91 +59,7 @@ def a_priori_pass_1(input_file, threshold, output_file, bit_map):
     return [frequent_items, baskets_number, avg_basket_length]
 
 
-def precedent_item_set(precedent_frequent, pas):
-    item_count = {}
-
-    perm_last_freq = itertools.combinations(precedent_frequent, pas)
-
-    for perm in perm_last_freq:
-        app = list()
-        disjoin_tuple = itertools.chain(perm)
-        for tup in disjoin_tuple:
-            if len(app) > pas: break
-            if pas > 2:
-                disjoin_elem = itertools.chain(tup)
-                for elem in disjoin_elem:
-                    if elem not in app: app += [elem]
-            else:
-                if tup not in app: app += [tup]
-        if len(app) > pas: continue
-        app.sort(key=int)
-        item_count[tuple(app)] = 0
-
-    return item_count
-
-
-def FAST_a_priori_pass_n(input_file, pas, threshold, item_count, output_file, bit_map):
-    frequent_items = set()  # contains the frequent tuples
-
-    for line in input_file:
-        splitted = line.split(' ')
-        if '\n' in splitted: splitted.remove('\n')
-        for i in splitted:
-            if bit_map[i] < pas - 1:
-                splitted.remove(i)
-        itemset = itertools.combinations(splitted, pas)
-
-        for tupla in itemset:
-            # increase the counter of the tuple
-            if tupla in item_count:
-                item_count[tupla] += 1
-
-    # filtering really frequent tuple element
-    for elem in item_count:
-        if item_count[elem] >= threshold:
-            frequent_items.add(elem)
-            for j in elem:
-                output_file.write(str(j) + ' ')
-                bit_map[j] = pas
-            output_file.write('\n')
-    print('#Frequent tuples:' + str(len(frequent_items)))
-
-    return frequent_items
-
-
-def SUPER_FAST_a_priori_pass_n(input_file, pas, threshold, item_count, output_file, bit_map):
-    frequent_items = set()  # contains the frequent tuples
-
-    for line in input_file:
-        splitted = line.split(' ')
-        if '\n' in splitted: splitted.remove('\n')
-
-        splitted = set(splitted)
-
-        for tupla in item_count:
-            # increase the counter of the tuple
-            check = 0
-            for item in tupla:
-                if item not in splitted:
-                    check = 1
-                    break
-            if check == 0:
-                item_count[tupla] += 1
-
-    # filtering really frequent tuple element
-    for elem in item_count:
-        if item_count[elem] >= threshold:
-            frequent_items.add(elem)
-            for j in elem:
-                output_file.write(str(j) + ' ')
-                bit_map[j] = pas
-            output_file.write('\n')
-    print('#Frequent tuples:' + str(len(frequent_items)))
-
-    return frequent_items
-
-
-def STATELESS_a_priori_n(input_file, pas, threshold, output_file, bit_map):
+def STATELESS_a_priori_n(input_file, pas, threshold_number, output_file, bit_map):
     frequent_items = set()  # contains the frequent tuples
     item_count = {}
     tstamp_one = time.time()
@@ -162,7 +79,7 @@ def STATELESS_a_priori_n(input_file, pas, threshold, output_file, bit_map):
 
     tstamp_two = time.time()
     # filtering really frequent tuple element
-    threshold_number = len(item_count) * threshold
+    # threshold_number = len(item_count) * threshold
     with tqdm(total=len(item_count)) as pbar:
         for elem in item_count:
             pbar.update(1)
@@ -195,6 +112,8 @@ def a_priori(input_file, output_file, threshold):
     baskets_number = app_ris[1]
     avg_basket_length = app_ris[2]
 
+    threshold_number = baskets_number * threshold
+
     print('time:' + str(time.time() - tstamp))
     print('**********************')
 
@@ -223,7 +142,7 @@ def a_priori(input_file, output_file, threshold):
         if c_stupid < (c_other * greatness_factor):
             print('stupid')
             input_file.seek(0)
-            frequent_tuples += [STATELESS_a_priori_n(input_file, pas, threshold, output_file, bit_map)]
+            frequent_tuples += [STATELESS_a_priori_n(input_file, pas, threshold_number, output_file, bit_map)]
             if len(frequent_tuples[-1]) < pas + 1:
                 print('time:' + str(time.time() - tstamp))
                 break
@@ -232,55 +151,55 @@ def a_priori(input_file, output_file, threshold):
             print('**********************')
             continue
 
-        print('other')
-        # computing precedent frequent items tuples
-        tA = time.time()
-
-        item_count = precedent_item_set(frequent_tuples[pas - 2], pas)
-
-        tA = time.time() - tA
-        # ~ print 'A-TIME:'+str(tA)
-        # ~ print 'PAPABILI:'+str(len(item_count))
-        if len(item_count) < pas + 1:
-            print('time:' + str(time.time() - tstamp))
-            break
-
-        # recompute costs
-        # ~ if last_cost_sign<0:
-        # calculate costs: c(FAST)-c(SUPER)
-        prec_freq_len = len(frequent_tuples[pas - 2])
-        papabili_num = len(item_count)
-        if pas == 2:
-            t = 2
-        else:
-            t = pas * (pas - 1)
-        c_fast = avg_basket_length + (
-            math.factorial(avg_basket_length) / (math.factorial(pas) * math.factorial(avg_basket_length - pas)))
-        c_super = papabili_num * pas
-        cost = c_fast - c_super
-        # ~ if cost>=0: last_cost_sign=1
-
-        # counting tuples occurrence in original file
-        tB = time.time()
-        input_file.seek(0)
-        # ~ if last_cost_sign<0:
-        if cost < 0:
-            frequent_tuples += [FAST_a_priori_pass_n(input_file, pas, threshold, item_count, output_file, bit_map)]
-        else:
-            frequent_tuples += [
-                SUPER_FAST_a_priori_pass_n(input_file, pas, threshold, item_count, output_file, bit_map)]
-
-        tB = time.time() - tB
-        # ~ print( 'B-TIME:'+str(tB))
-
-
-        # ~ if len(frequent_tuples[-1])==0:
-        if len(frequent_tuples[-1]) < pas + 1:
-            print('time:' + str(time.time() - tstamp))
-            break
-        pas += 1
-        print('time:' + str(time.time() - tstamp))
-        print('**********************')
+            # print('other')
+            # # computing precedent frequent items tuples
+            # tA = time.time()
+            #
+            # item_count = precedent_item_set(frequent_tuples[pas - 2], pas)
+            #
+            # tA = time.time() - tA
+            # # ~ print 'A-TIME:'+str(tA)
+            # # ~ print 'PAPABILI:'+str(len(item_count))
+            # if len(item_count) < pas + 1:
+            #     print('time:' + str(time.time() - tstamp))
+            #     break
+            #
+            # # recompute costs
+            # # ~ if last_cost_sign<0:
+            # # calculate costs: c(FAST)-c(SUPER)
+            # prec_freq_len = len(frequent_tuples[pas - 2])
+            # papabili_num = len(item_count)
+            # if pas == 2:
+            #     t = 2
+            # else:
+            #     t = pas * (pas - 1)
+            # c_fast = avg_basket_length + (
+            #     math.factorial(avg_basket_length) / (math.factorial(pas) * math.factorial(avg_basket_length - pas)))
+            # c_super = papabili_num * pas
+            # cost = c_fast - c_super
+            # # ~ if cost>=0: last_cost_sign=1
+            #
+            # # counting tuples occurrence in original file
+            # tB = time.time()
+            # input_file.seek(0)
+            # # ~ if last_cost_sign<0:
+            # if cost < 0:
+            #     frequent_tuples += [FAST_a_priori_pass_n(input_file, pas, threshold, item_count, output_file, bit_map)]
+            # else:
+            #     frequent_tuples += [
+            #         SUPER_FAST_a_priori_pass_n(input_file, pas, threshold, item_count, output_file, bit_map)]
+            #
+            # tB = time.time() - tB
+            # # ~ print( 'B-TIME:'+str(tB))
+            #
+            #
+            # # ~ if len(frequent_tuples[-1])==0:
+            # if len(frequent_tuples[-1]) < pas + 1:
+            #     print('time:' + str(time.time() - tstamp))
+            #     break
+            # pas += 1
+            # print('time:' + str(time.time() - tstamp))
+            # print('**********************')
     output_file.close()
     return frequent_tuples
 
@@ -522,6 +441,22 @@ def create_all_itemsets_one_pass(locales_map, DB_BASE_PATH, output_base_path, cl
     """ Create all the itemsets (general, total, per locale, level, class,...) scanning the dataset only once. """
     # TODO
     return
+
+
+def itemsets_dataset_infos(itemsets_path):
+    """ Returns few stats about the dataset of the itemsets,
+    i.e. set and number of distinct items, number of baskets, distribution of baskets lenght
+    """
+    distinct_items = set()
+    basket_lengths = {}
+    with open(itemsets_path, "r") as input_file:
+        reader = csv.reader(input_file, delimiter=' ')
+        for basket in reader:
+            for item in basket:
+                distinct_items.add(item)
+            basket_lengths.setdefault(len(basket), 0)
+            basket_lengths[len(basket)] += 1
+    return distinct_items, basket_lengths
 
 
 ###############################################

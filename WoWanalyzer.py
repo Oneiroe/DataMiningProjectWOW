@@ -12,6 +12,8 @@ from tqdm import tqdm
 from collections import Counter
 import time
 import WOWanalysis.frequent_itemsets_apriori as my_apriori
+import pickle
+import numpy as np
 
 ###############################################
 ####
@@ -267,8 +269,18 @@ def one_pass_characters_locale(region, locale, output_path):
 
 def one_pass_characters(output_path, locations):
     """ Retrieve all the information required with a single scan of the whole DB.
-        Build a DB in a single file with just the relevant info of all the characters"""
+        Build a csv DB in a single file with just the relevant info of all the characters.
+        Serialize the characters map into a pickle object.
+    """
     logging.info('one_pass_characters()')
+    # TODO also port to sqLite DB
+
+    # this will be serialized as pickle
+    # key:region+'_'+locale+'_'+character file name, value map similar to the json
+    map_output = {}
+    pickle_output_path = os.path.join(output_path, 'serialized_character_map_global.pickle')
+
+    items_fields_to_skip = {'averageItemLevel', 'averageItemLevelEquipped'}
 
     with open(os.path.join(output_path, 'CHARACTERS_DB_RELEVANT_GLOBAL.csv'),
               'w',
@@ -276,7 +288,7 @@ def one_pass_characters(output_path, locations):
               encoding='utf-8') as output_file:
         writer = csv.writer(output_file)
         writer.writerow(
-            ['name', 'realm', 'region', 'locale', 'class', 'level', 'race', 'gender', 'achievementPoints',
+            ['file', 'name', 'realm', 'region', 'locale', 'class', 'level', 'race', 'gender', 'achievementPoints',
              'firstTimestamp', 'lastModified', 'TimestampLv10', 'TimestampLv20', 'TimestampLv30',
              'TimestampLv40',
              'TimestampLv50', 'TimestampLv60', 'TimestampLv70', 'TimestampLv80', 'TimestampLv85',
@@ -294,12 +306,10 @@ def one_pass_characters(output_path, locations):
                 locale_output_file = open(locale_output_path, 'w', newline='', encoding='utf-8')
                 locale_writer = csv.writer(locale_output_file)
                 locale_writer.writerow(
-                    ['name', 'realm', 'region', 'locale', 'class', 'level', 'race', 'gender', 'achievementPoints',
-                     'firstTimestamp', 'lastModified', 'TimestampLv10', 'TimestampLv20', 'TimestampLv30',
-                     'TimestampLv40',
-                     'TimestampLv50', 'TimestampLv60', 'TimestampLv70', 'TimestampLv80', 'TimestampLv85',
-                     'TimestampLv90',
-                     'TimestampLv100', 'TimestampLv110'])
+                    ['file', 'name', 'realm', 'region', 'locale', 'class', 'level', 'race', 'gender',
+                     'achievementPoints', 'firstTimestamp', 'lastModified', 'TimestampLv10', 'TimestampLv20',
+                     'TimestampLv30', 'TimestampLv40', 'TimestampLv50', 'TimestampLv60', 'TimestampLv70',
+                     'TimestampLv80', 'TimestampLv85', 'TimestampLv90', 'TimestampLv100', 'TimestampLv110'])
 
                 ACHIEVEMENTS_PATH = os.path.join(DB_LOCALE_PATH, 'data', 'character', 'achievements')
                 # maps achievements id to their natural language name
@@ -331,7 +341,10 @@ def one_pass_characters(output_path, locations):
                             try:
                                 character_json = json.load(character_file)
                                 try:
+                                    ########################################## CSV
                                     character_out = []
+                                    # 'file',
+                                    character_out.append(file)
                                     # 'name',
                                     character_out.append(character_json['name'])
                                     # 'realm',
@@ -374,10 +387,69 @@ def one_pass_characters(output_path, locations):
                                     # Write character data into file
                                     writer.writerow(character_out)
                                     locale_writer.writerow(character_out)
+
+                                    ########################################## PICKLE
+                                    # APPEARANCE
+                                    character_appearance = list(character_json['appearance'].values())
+
+                                    # ITEMS
+                                    character_items = set()
+                                    for field in character_json['items']:
+                                        if field in items_fields_to_skip:
+                                            continue
+                                        character_items.add(character_json['items'][field]['id'])
+
+                                    # MOUNTS
+                                    character_mounts = set()
+                                    for mount in character_json['mounts']['collected']:
+                                        character_mounts.add(mount['creatureId'])
+
+                                    # PETS
+                                    character_pets = set()
+                                    for pet in character_json['pets']['collected']:
+                                        character_pets.add(pet['creatureId'])
+
+                                    # PROFESSIONS
+                                    character_professions = set()
+                                    for primary_profession in character_json['professions']['primary']:
+                                        character_professions.add(primary_profession['id'])
+                                    for secondary_profession in character_json['professions']['secondary']:
+                                        character_professions.add(secondary_profession['id'])
+
+                                    # STATS (normalized)
+                                    character_stats = character_json['stats']
+                                    character_stats.pop('powerType')
+                                    character_stats = list(character_stats.values())
+
+                                    # TALENTS
+                                    character_talents = set()
+                                    for category in character_json['talents']:
+                                        for talent in category['talents']:
+                                            if talent is not None:
+                                                character_talents.add(talent['spell']['id'])
+
+                                    # write output
+                                    map_output[region + '_' + locale + '_' + file] = {
+                                        'appearance': character_appearance,
+                                        'items': character_items,
+                                        'mounts': character_mounts,
+                                        'pets': character_pets,
+                                        'professions': character_professions,
+                                        'stats': character_stats,
+                                        'talents': character_talents,
+                                        'class': character_json['class'],
+                                        'level': character_json['level'],
+                                        'file': file,
+                                        'locale': locale,
+                                        'region': region
+                                    }
                                 except KeyError as err:
                                     logging.warning(
                                         'KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
                                     logging.warning(str(os.path.join(CHARACTER_PATH, file)))
+                                except ValueError as err:
+                                    logging.warning(
+                                        'ValueError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
                             except json.decoder.JSONDecodeError as err:
                                 # Probable incomplete or wrongly downloaded data, retry
                                 logging.warning(
@@ -385,6 +457,146 @@ def one_pass_characters(output_path, locations):
                                 logging.warning(str(os.path.join(CHARACTER_PATH, file)))
                                 continue
                 locale_output_file.close()
+
+    logging.debug('one_pass_characters(): serializing to pickle')
+    with open(pickle_output_path, 'wb') as f:
+        pickle.dump(map_output, f, pickle.HIGHEST_PROTOCOL)
+    return
+
+
+def csv_unique(original_csv_path, output_path):
+    """ Returns a csv DB without doubles"""
+    # TODO
+    return
+
+
+def pickle_numpy_upgrade(original_pickle_path, output_path):
+    """ Convert the numerical array of the serialized character map into numpy arrays """
+    logging.info('pickle_numpy_upgrade()')
+    with open(original_pickle_path, 'rb') as f:
+        characters_map = pickle.load(f)
+    with tqdm(total=len(characters_map)) as pbar:
+        for character in characters_map:
+            pbar.update(1)
+            characters_map[character]['stats'] = np.array(characters_map[character]['stats'])
+    with open(output_path, 'wb') as f:
+        pickle.dump(characters_map, f, pickle.HIGHEST_PROTOCOL)
+    return
+
+
+def pickle_unique(original_pickle_path, output_path):
+    """ Create a picke with only unique characters """
+    logging.info('pickle_unique()')
+    with open(original_pickle_path, 'rb') as f:
+        original_characters_map = pickle.load(f)
+    unique_map = {}
+    with tqdm(total=len(original_characters_map)) as pbar:
+        for character in original_characters_map:
+            pbar.update(1)
+            file_name = original_characters_map[character]['file']
+            if file_name in unique_map:
+                if sys.getsizeof(unique_map[file_name]) < sys.getsizeof(original_characters_map[character]):
+                    unique_map[file_name] = original_characters_map[character]
+            else:
+                unique_map[file_name] = original_characters_map[character]
+
+    with open(output_path, 'wb') as f:
+        pickle.dump(unique_map, f, pickle.HIGHEST_PROTOCOL)
+    return
+
+
+def pickle_subsets(original_pickle_path, outputh_base_path, common_prefix):
+    """ Makes smaller Pickle-DBs from the over all big one:
+    per Region,Per Locale, per class, per level, per class-level-90-100-110 """
+    logging.info('pickle_subsets()')
+    with open(original_pickle_path, 'rb') as f:
+        original_characters_map = pickle.load(f)
+    logging.info('Pickle dataset Loaded')
+
+    locations = {
+        'EU': ['en_GB', 'de_DE', 'es_ES', 'fr_FR', 'it_IT', 'pt_PT', 'ru_RU'],
+        'KR': ['ko_KR'],
+        'TW': ['zh_TW'],
+        'US': ['en_US', 'pt_BR', 'es_MX']
+    }
+
+    regions_map = {}
+    locales_map = {}
+    for region in locations:
+        regions_map[region] = {}
+        for locale in locations[region]:
+            locales_map[locale] = {}
+
+    classes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    classes_map = {}
+    for c in classes:
+        classes_map[c] = {}
+
+    levels_map = {}
+    for l in range(111):
+        levels_map[l] = {}
+
+    # Build maps
+    with tqdm(total=len(original_characters_map)) as pbar:
+        for character in original_characters_map:
+            pbar.update(1)
+            region = original_characters_map[character]['region']
+            locale = original_characters_map[character]['locale']
+            classe = original_characters_map[character]['class']
+            level = original_characters_map[character]['level']
+
+            regions_map[region][character] = original_characters_map[character]
+            locales_map[locale][character] = original_characters_map[character]
+            classes_map[classe][character] = original_characters_map[character]
+            levels_map[level][character] = original_characters_map[character]
+
+    ### Output
+
+    # common_prefix='serialized_character_map_numpy_unique'
+
+    print('serializing regions_map')
+    for region in locations:
+        pickle_output_path = os.path.join(outputh_base_path, common_prefix + '_' + region + '.pickle')
+        with open(pickle_output_path, 'wb') as f:
+            pickle.dump(regions_map[region], f, pickle.HIGHEST_PROTOCOL)
+
+    print('serializing locales_map')
+    for region in locations:
+        for locale in locations[region]:
+            pickle_output_path = os.path.join(outputh_base_path, common_prefix + '_' + locale + '.pickle')
+            with open(pickle_output_path, 'wb') as f:
+                pickle.dump(locales_map[locale], f, pickle.HIGHEST_PROTOCOL)
+
+    print('serializing classes_map')
+    for c in classes:
+        pickle_output_path = os.path.join(outputh_base_path, common_prefix + '_c' + str(c) + '.pickle')
+        with open(pickle_output_path, 'wb') as f:
+            pickle.dump(classes_map[c], f, pickle.HIGHEST_PROTOCOL)
+
+    print('serializing levels_map')
+    for l in range(111):
+        if len(levels_map[l]) > 0:
+            pickle_output_path = os.path.join(outputh_base_path, common_prefix + '_lv' + str(l) + '.pickle')
+            with open(pickle_output_path, 'wb') as f:
+                pickle.dump(levels_map[l], f, pickle.HIGHEST_PROTOCOL)
+    return
+
+
+def pickle_combining(class_pickle, level_pickle, output_path):
+    """ returns a pickle combining the common character of a certain level and class"""
+    logging.info('pickle_combining()')
+    with open(class_pickle, 'rb') as f:
+        class_map = pickle.load(f)
+    with open(level_pickle, 'rb') as f:
+        level_map = pickle.load(f)
+    intersection_map = {}
+    intersection = set(class_map.keys()).intersection(set(level_map.keys()))
+    for i in intersection:
+        intersection_map[i] = class_map[i]
+
+    with open(output_path, 'wb') as f:
+        pickle.dump(intersection_map, f, pickle.HIGHEST_PROTOCOL)
+
     return
 
 
@@ -1171,11 +1383,10 @@ def apriori_offline_frequent_itemsets_class_level_total(itemsets_base_path, outp
     for character_class in classes:
         for level in range(0, 111, 10):
             # A-PRIORI
-
             input_file = open(os.path.join(itemsets_base_path, 'total_itemsets_lv_' + str(level) + '_class_' + str(
                 character_class) + '.dat'), 'r')
             output_path = os.path.join(output_base_path, 'total_frequent_itemsets_lv_' + str(level) + '_class_' + str(
-                character_class) + '.dat')
+                character_class) + '[threshold_' + str(threshold) + '].dat')
             print('threshold:' + str(threshold))
 
             tstamp = time.time()
@@ -1205,12 +1416,24 @@ def main():
     # Removed corrupted characters json files
     # print('files moved : ' + str(clean_characters_dataset('EU', 'it_IT')))
     # one_pass_characters_locale('EU', 'it_IT', 'ita_DB_test.csv')
-    one_pass_characters(os.path.join('Results'), locations)
+    # one_pass_characters(os.path.join('Results', 'DBs', 'New'), locations)
+    # pickle_numpy_upgrade(os.path.join('Results', 'DBs', 'serialized_character_map_global.pickle'),
+    #                      os.path.join('Results', 'DBs', 'serialized_character_map_numpy_global.pickle'))
+    # pickle_unique(os.path.join('Results', 'DBs', 'serialized_character_map_numpy_global.pickle'),
+    #               os.path.join('Results', 'DBs', 'serialized_character_map_numpy_global_unique.pickle'))
+    # pickle_subsets(os.path.join('Results', 'DBs', 'serialized_character_map_numpy_global_unique.pickle'),
+    #                os.path.join('Results', 'DBs'),
+    #                'serialized_character_map_numpy_unique')
+    for c in range(1, 13):
+        print(str(c))
+        pickle_combining(os.path.join('Results', 'DBs', 'serialized_character_map_numpy_unique_c' + str(c) + '.pickle'),
+                         os.path.join('Results', 'DBs', 'serialized_character_map_numpy_unique_lv100.pickle'),
+                         os.path.join('Results', 'DBs','serialized_character_map_numpy_unique_c' + str(c) + '_lv100.pickle'))
     #### SIMPLE ANALYTICAL STUFF
     print('===SIMPLE ANALYSIS')
 
-    print('total #players:' + str(number_of_players_retrieved_total()))
-    print('distinct total #players:' + str(number_of_distinct_players_retrieved_total()))
+    # print('total #players:' + str(number_of_players_retrieved_total()))
+    # print('distinct total #players:' + str(number_of_distinct_players_retrieved_total()))
     # print(number_of_players_retrieved_per_region())
     # print(number_of_distinct_players_retrieved_per_region())
     # print(number_of_players_retrieved_per_locale())
@@ -1242,70 +1465,80 @@ def main():
 
     #### FREQUENT ITEMSET
     print('===FREQUENT ITEMSET')
-    ### APRIORI GENERAL
-    # for region in locations:
-    #     for locale in locations[region]:
-    #         output_path = 'itemsets_' + region + '_' + locale + '.dat'
-    #         my_apriori.create_locale_characters_itemsets(region, locale, DB_BASE_PATH, output_path)
-    # my_apriori.join_locales_characters_itemets(os.path.join(os.getcwd(), 'Results'),
-    #                                            os.path.join(os.getcwd(), 'Results', 'total_itemsets.dat'))
-    # apriori_offline_frequent_itemsets_locale('EU', 'it_IT', 0.01)
-    # apriori_offline_frequent_itemsets_total(os.path.join(os.getcwd(), 'Results', 'total_itemsets.dat'),
-    #                                         os.path.join(os.getcwd(), 'Results', 'total_frequent_itemsets.dat'),
-    #                                         0.001)
-
-    ### APRIORI per LEVEL
-    # for region in locations:
-    #     for locale in locations[region]:
-    #         my_apriori.create_level_locale_characters_itemsets(region,
-    #                                                            locale,
-    #                                                            DB_BASE_PATH,
-    #                                                            os.path.join(os.getcwd(), 'Results'))
-    # my_apriori.join_level_locale_characters_itemets(os.path.join(os.getcwd(), 'Results'),
-    #                                                  os.path.join(os.getcwd(), 'Results'))
-    # for region in locations:
-    #     for locale in locations[region]:
-    #         apriori_offline_frequent_itemsets_level_locale(region, locale, 0.01)
-    # apriori_offline_frequent_itemsets_level_total(os.path.join(os.getcwd(), 'Results'),
-    #                                               os.path.join(os.getcwd(), 'Results'),
-    #                                               0.01)
+    # ### APRIORI GENERAL
+    # # for region in locations:
+    # #     for locale in locations[region]:
+    # #         output_path = 'itemsets_' + region + '_' + locale + '.dat'
+    # #         my_apriori.create_locale_characters_itemsets(region, locale, DB_BASE_PATH, output_path)
+    # # my_apriori.join_locales_characters_itemets(os.path.join(os.getcwd(), 'Results'),
+    # #                                            os.path.join(os.getcwd(), 'Results', 'total_itemsets.dat'))
+    # # apriori_offline_frequent_itemsets_locale('EU', 'it_IT', 0.01)
+    # thresholds = [1, 0.75, 0.5, 0.25, 0.15, 0.1, 0.05, 0.01, 0.005, 0.002, 0.001]
+    # for threshold in thresholds:
+    #     threshold = 1
+    #     # threshold = 0.05
+    #     apriori_offline_frequent_itemsets_total(
+    #         os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'total_itemsets.dat'),
+    #         os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'tests',
+    #                      'total_frequent_itemsets[threshold_' + str(threshold) + '].dat'),
+    #         threshold
+    #     )
     #
-
-    ### APRIORI per CLASS and LEVEL
-    # CLASS_PATH = os.path.join(DB_BASE_PATH, 'US', 'en_US', 'data', 'character', 'classes')
-
-    # classes = []
-    # # Find all classes
-    # with open(os.path.join(CLASS_PATH, 'classes.json')) as classes_file:
-    #     try:
-    #         classes_json = json.load(classes_file)
-    #         try:
-    #             for character_class in classes_json['classes']:
-    #                 classes.append(character_class['id'])
-    #         except KeyError as err:
-    #             logging.warning('KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
-    #             logging.warning(str(os.path.join(CLASS_PATH, 'classes.json')))
-    #     except json.decoder.JSONDecodeError as err:
-    #         # Probable incomplete or wrongly downloaded data, retry
-    #         logging.warning('JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
-    #         logging.warning(str(os.path.join(CLASS_PATH, 'classes.json')))
-
-    # for region in locations:
-    #     for locale in locations[region]:
-    #         my_apriori.create_class_level_locale_characters_itemsets(region,
-    #                                                                  locale,
-    #                                                                  DB_BASE_PATH,
-    #                                                                  os.path.join(os.getcwd(), 'Results'))
-    # my_apriori.join_class_level_locale_characters_itemets(os.path.join(os.getcwd(), 'Results'),
-    #                                                        os.path.join(os.getcwd(), 'Results'),
-    #                                                        classes)
-    # for region in locations:
-    #     for locale in locations[region]:
-    #         apriori_offline_frequent_itemsets_class_level_locale(region, locale, 0.01, classes)
-    # apriori_offline_frequent_itemsets_class_level_total(os.path.join(os.getcwd(), 'Results'),
-    #                                                     os.path.join(os.getcwd(), 'Results'),
-    #                                                     0.01,
-    #                                                     classes)
+    #     ### APRIORI per LEVEL
+    #     # for region in locations:
+    #     #     for locale in locations[region]:
+    #     #         my_apriori.create_level_locale_characters_itemsets(region,
+    #     #                                                            locale,
+    #     #                                                            DB_BASE_PATH,
+    #     #                                                            os.path.join(os.getcwd(), 'Results'))
+    #     # my_apriori.join_level_locale_characters_itemets(os.path.join(os.getcwd(), 'Results'),
+    #     #                                                  os.path.join(os.getcwd(), 'Results'))
+    #     # for region in locations:
+    #     #     for locale in locations[region]:
+    #     #         apriori_offline_frequent_itemsets_level_locale(region, locale, 0.01)
+    #     # apriori_offline_frequent_itemsets_level_total(os.path.join(os.getcwd(), 'Results'),
+    #     #                                               os.path.join(os.getcwd(), 'Results'),
+    #     #                                               0.01)
+    #     #
+    #
+    #     ### APRIORI per CLASS and LEVEL
+    #     # CLASS_PATH = os.path.join(DB_BASE_PATH, 'US', 'en_US', 'data', 'character', 'classes')
+    #
+    #     # classes = []
+    #     # # Find all classes
+    #     # with open(os.path.join(CLASS_PATH, 'classes.json')) as classes_file:
+    #     #     try:
+    #     #         classes_json = json.load(classes_file)
+    #     #         try:
+    #     #             for character_class in classes_json['classes']:
+    #     #                 classes.append(character_class['id'])
+    #     #         except KeyError as err:
+    #     #             logging.warning('KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+    #     #             logging.warning(str(os.path.join(CLASS_PATH, 'classes.json')))
+    #     #     except json.decoder.JSONDecodeError as err:
+    #     #         # Probable incomplete or wrongly downloaded data, retry
+    #     #         logging.warning('JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
+    #     #         logging.warning(str(os.path.join(CLASS_PATH, 'classes.json')))
+    #
+    #     classes = [11]
+    #     # threshold = 1
+    #     # for region in locations:
+    #     #     for locale in locations[region]:
+    #     #         my_apriori.create_class_level_locale_characters_itemsets(region,
+    #     #                                                                  locale,
+    #     #                                                                  DB_BASE_PATH,
+    #     #                                                                  os.path.join(os.getcwd(), 'Results'))
+    #     # my_apriori.join_class_level_locale_characters_itemets(os.path.join(os.getcwd(), 'Results'),
+    #     #                                                        os.path.join(os.getcwd(), 'Results'),
+    #     #                                                        classes)
+    #     # for region in locations:
+    #     #     for locale in locations[region]:
+    #     #         apriori_offline_frequent_itemsets_class_level_locale(region, locale, 0.01, classes)
+    #     apriori_offline_frequent_itemsets_class_level_total(os.path.join(os.getcwd(), 'Results', 'frequent_itemsets'),
+    #                                                         os.path.join(os.getcwd(), 'Results', 'frequent_itemsets',
+    #                                                                      'tests'),
+    #                                                         threshold,
+    #                                                         classes)
 
     #### SIMILARITY
     print('===SIMILARITY')

@@ -129,9 +129,9 @@ def distance_matrix_sequential(characters_list, distance_function, output_path):
 ##############
 # Multi Process
 
-def worker_row(i, characters_list, distance_function, output_queue):
+def worker_row(i, characters_list, characters_num, distance_function, output_queue):
     row = [None] * i
-    for j in range(i, len(characters_list)):
+    for j in range(i, characters_num):
         row += [distance_function(characters_list[i], characters_list[j])]
     output_queue.put(row)
     return row
@@ -143,8 +143,6 @@ def output_writer_listener(output_path, output_queue, characters_num):
             writer = csv.writer(output_file)
             while 1:
                 m = output_queue.get()
-                if m == 'kill':
-                    break
                 writer.writerow(m)
                 output_file.flush()
                 pbar_out.update(1)
@@ -153,6 +151,7 @@ def output_writer_listener(output_path, output_queue, characters_num):
 def distance_matrix_multi(characters_list, distance_function, output_path):
     """ Write distance matrix in parallel """
     logging.info('distance_matrix_multi()')
+    characters_num = len(characters_list)
     manager = multiprocessing.Manager()
     output_queue = manager.Queue()
     # with Pool(multiprocessing.cpu_count()) as p:
@@ -165,17 +164,51 @@ def distance_matrix_multi(characters_list, distance_function, output_path):
                              psutil.Process(os.getpid()).memory_info().rss / float(2 ** 20))) + 1
                          )
     with Pool(process_number) as p:
-        watcher = p.apply_async(output_writer_listener, (output_path, output_queue, len(characters_list)))
+        watcher = p.apply_async(output_writer_listener, (output_path, output_queue, characters_num))
         row_pair_generator = ((i,
                                characters_list,
+                               characters_num,
                                distance_function,
-                               output_queue) for i in range(len(characters_list)))
+                               output_queue) for i in range(characters_num))
         p.starmap(worker_row, row_pair_generator)
     return
 
 
 ######
-# Multi bo
+# Post-Processin
+
+def sort_distance_matrix(original_csv_path, output_path):
+    """ Sort in the right order the multi processing result"""
+    logging.info('sort_distance_matrix()')
+    app_indices = {}
+    # app_seek = {}
+    characters_num = 15906
+    characters_num = 372
+    # Pass-1 build index
+    with open(original_csv_path, 'r', newline='', encoding='utf-8') as input_file:
+        reader = csv.reader(input_file, delimiter=',')
+        with tqdm(total=characters_num) as pbar:
+            i = 0
+            for row in reader:
+                pbar.update(1)
+                app_indices[row.count('')] = i
+                # app_seek[row.count('')] = input_file.tell()
+                i += 1
+        # Pass-2 write
+        input_file.seek(0)
+        with open(output_path, 'w', newline='', encoding='utf-8') as output_file:
+            with tqdm(total=characters_num) as pbar:
+                l=input_file.readlines()
+                for i in range(characters_num):
+                    pbar.update(1)
+                    index = app_indices[i]
+                    # input_file.readlines(index)
+                    # for _ in range(index):
+                    #     input_file.readline()
+                    output_file.write(l[index])
+                    # input_file.seek(0)
+
+    return
 
 
 ###############################################
@@ -205,21 +238,28 @@ def main():
     stats_max_dist_global = 5990271.526328605
 
     # with open(os.path.join(os.getcwd(), 'Results', 'serialized_character_map_numpy.pickle'), 'rb') as f:
+    locale = 'de_DE'
     with open(os.path.join(os.getcwd(),
-                           'Results',
-                           'PICKLES',
-                           'serialized_character_map_numpy_unique.pickle'), 'rb') as f:
+                           # 'Results',
+                           # 'PICKLES',
+                           # 'serialized_character_map_numpy_unique.pickle'), 'rb') as f:
+                           # 'serialized_character_map_numpy_' + locale + '.pickle'), 'rb') as f:
+                           'serialized_test_c12_lv100.pickle'), 'rb') as f:
         characters_map = pickle.load(f)
-    # characters_list = list(characters_map.values())[:2000]
-    characters_list = list(characters_map.values())
-    # characters_map = None  # space saving
-    del characters_map  # space saving
-    logging.info('Pickle dataset Loaded')
-    print('characters_list (bytes): ' + str(sys.getsizeof(characters_list)))
-    # print('Loading Time:' + str(time.time() - t))
+    # # characters_list = list(characters_map.values())[:2000]
+    characters_list = tuple(characters_map.values())
+    # # characters_map = None  # space saving
+    # del characters_map  # space saving
+    # logging.info('Pickle dataset Loaded')
+    # print('characters_list (bytes): ' + str(sys.getsizeof(characters_list)))
+    # # print('Loading Time:' + str(time.time() - t))
     tstamp = time.time()
-    # distance_matrix_sequential(characters_list, distance_general_from_map, 'test_matrix.csv')
-    distance_matrix_multi(characters_list, distance_general_from_map, 'test_matrix.csv')
+    # # distance_matrix_sequential(characters_list, distance_general_from_map, 'test_matrix.csv')
+    # distance_matrix_multi(characters_list, distance_general_from_map, 'matrix_' + locale + '.csv')
+    distance_matrix_multi(characters_list, distance_general_from_map, 'matrix_test_12_100.csv')
+
+    # sort_distance_matrix('matrix_' + locale + '.csv', 'matrix_sorted_' + locale + '.csv')
+    sort_distance_matrix('matrix_test_12_100.csv', 'matrix_test_sorted_12_100.csv')
 
     #     wolfram alpha folmula for expectation, where sec=avg second to complete a full row
     #     sum (n/(235888/x)), 1<=n<=235888,x=20

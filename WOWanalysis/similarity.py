@@ -18,6 +18,7 @@ import pickle
 import threading
 import multiprocessing
 from multiprocessing import Process, Pool, Value, Array, Lock, current_process
+import pandas
 
 
 ###############################################
@@ -80,217 +81,6 @@ def characters_stats_max_min_mean(DB_BASE_PATH, locations):
     return maximum, minimum, mean
 
 
-def one_pass_characters_info_to_file(DB_BASE_PATH, locations, output_path):
-    """ create one file DB with all and only the relevant info regarding distance measure """
-    logging.debug('one_pass_characters_info_to_file()')
-    # TODO to be sure write at the same time in csv, json, pickle, sqLite
-
-    # this will be serialized as pickle
-    # key:region+'_'+locale+'_'+character file name, value map similar to the json
-    map_output = {}
-
-    # sqLite database handler to output
-    # sqlite_output_handler = None
-
-    # with open(output_path, 'w', newline='', encoding='utf-8') as output_file:
-    #     writer = csv.writer(output_file)
-    #     writer.writerow(['file_name', ])
-    # INDEX range : DISTANCE ARGUMENT
-    # 0 : character file name
-    # 1-x : character_appearance
-    # a-b : items
-    # a-b : mounts
-    # a-b : pets
-    # a-b : professions
-    # a-b : stats
-    # a-b : talents
-    for region in locations:
-        for locale in locations[region]:
-            logging.debug('one_pass_characters_info_to_file() [' + region + ',' + locale + ']')
-            DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, region, locale)
-            CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
-
-            # Utils
-            items_fields_to_skip = {'averageItemLevel', 'averageItemLevelEquipped'}
-
-            with tqdm(total=len(os.listdir(CHARACTER_PATH))) as pbar:
-                for file in os.listdir(CHARACTER_PATH):
-                    pbar.update(1)
-                    if not file.endswith('.json'):
-                        continue
-                    with open(os.path.join(CHARACTER_PATH, file)) as character_file:
-                        try:
-                            character_json = json.load(character_file)
-                            try:
-                                # APPEARANCE
-                                character_appearance = list(character_json['appearance'].values())
-
-                                # ITEMS
-                                character_items = set()
-                                for field in character_json['items']:
-                                    if field in items_fields_to_skip:
-                                        continue
-                                    character_items.add(character_json['items'][field]['id'])
-
-                                # MOUNTS
-                                character_mounts = set()
-                                for mount in character_json['mounts']['collected']:
-                                    character_mounts.add(mount['creatureId'])
-
-                                # PETS
-                                character_pets = set()
-                                for pet in character_json['pets']['collected']:
-                                    character_pets.add(pet['creatureId'])
-
-                                # PROFESSIONS
-                                character_professions = set()
-                                for primary_profession in character_json['professions']['primary']:
-                                    character_professions.add(primary_profession['id'])
-                                for secondary_profession in character_json['professions']['secondary']:
-                                    character_professions.add(secondary_profession['id'])
-
-                                # STATS (normalized)
-                                character_stats = character_json['stats']
-                                character_stats.pop('powerType')
-                                character_stats = list(character_stats.values())
-
-                                # TALENTS
-                                character_talents = set()
-                                for category in character_json['talents']:
-                                    for talent in category['talents']:
-                                        if talent is not None:
-                                            character_talents.add(talent['spell']['id'])
-
-                                # write output
-                                map_output[region + '_' + locale + '_' + file] = {
-                                    'appearance': character_appearance,
-                                    'items': character_items,
-                                    'mounts': character_mounts,
-                                    'pets': character_pets,
-                                    'professions': character_professions,
-                                    'stats': character_stats,
-                                    'talents': character_talents
-                                }
-                            except KeyError as err:
-                                logging.warning(
-                                    'KeyError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
-                                logging.warning(str(os.path.join(CHARACTER_PATH, file)))
-                            except ValueError as err:
-                                logging.warning(
-                                    'ValueError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
-                        except json.decoder.JSONDecodeError as err:
-                            # Probable incomplete or wrongly downloaded data, retry
-                            logging.warning(
-                                'JSONDecodeError: ' + str(err) + ' -- line: ' + str(sys.exc_info()[-1].tb_lineno))
-                            logging.warning(str(os.path.join(CHARACTER_PATH, file)))
-                            continue
-
-    # serialize to pickle
-    logging.debug('one_pass_characters_info_to_file(): serializing to pickle')
-    tstamp = time.time()
-    pickle_output_path = os.path.join(output_path, 'serialized_character_map.pickle')
-    with open(pickle_output_path, 'wb') as f:
-        pickle.dump(map_output, f, pickle.HIGHEST_PROTOCOL)
-    print('Time to serialize pickle: ' + str(time.time() - tstamp))
-
-    return
-
-
-def big_pickle_to_small_pickles(original_pickle_path, relevant_db_csv, outputh_base_path):
-    """ Makes smaller Pickle-DBs from the over all big one:
-    Unique over all, per Region,Per Locale, per class, per level, per class-level-90-100-110 """
-    logging.info('big_pickle_to_small_pickles()')
-    with open(original_pickle_path, 'rb') as f:
-        original_characters_map = pickle.load(f)
-    logging.info('Pickle dataset Loaded')
-
-    unique_map = {}
-
-    locations = {
-        'EU': ['en_GB', 'de_DE', 'es_ES', 'fr_FR', 'it_IT', 'pt_PT', 'ru_RU'],
-        'KR': ['ko_KR'],
-        'TW': ['zh_TW'],
-        'US': ['en_US', 'pt_BR', 'es_MX']
-    }
-
-    regions_map = {}
-    locales_map = {}
-    for region in locations:
-        regions_map[region] = {}
-        for locale in locations[region]:
-            locales_map[locale] = {}
-
-    # classes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-    # classes_map = {}
-    # classes_app = {}
-    # for c in classes:
-    #     classes_map[c] = {}
-    #
-    # levels_map = {}
-    # levels_app = {}
-    # for i in range(111):
-    #     levels_map[i] = {}
-    #
-    # with open(relevant_db_csv, 'r', newline='', encoding='utf-8') as csv_file:
-    #     csv_file.readline()
-    #     reader = csv.reader(csv_file, delimiter=',')
-    #     for row in reader:
-    #         # print(row[1])
-    #         k = (row[2] + '_' + row[3] + '_' + row[0] + '[' + row[1] + '].json').lower().replace(' ', '-')
-    #         # print(k)
-    #         classes_app[k] = int(row[4])
-    #         levels_app[k] = int(row[5])
-    #
-    # logging.info('Maps initialized')
-
-    # Build maps
-    with tqdm(total=len(original_characters_map)) as pbar:
-        for character in original_characters_map:
-            pbar.update(1)
-            if len(character.split('_')) != 4:
-                print(character)
-            region, locale_a, locale_b, character_file = character.split('_')
-            locale = locale_a + '_' + locale_b
-            if character_file in unique_map:
-                if sys.getsizeof(unique_map[character_file]) < sys.getsizeof(original_characters_map[character]):
-                    unique_map[character_file] = original_characters_map[character]
-            else:
-                unique_map[character_file] = original_characters_map[character]
-            regions_map[region][character] = original_characters_map[character]
-            locales_map[locale][character] = original_characters_map[character]
-
-            # k = character.lower().replace(' ', '-')
-            # classes_map[classes_app[k]][character] = original_characters_map[character]
-            # levels_map[levels_app[k]][character] = original_characters_map[character]
-
-    ### Output
-    print('serializing unique_map')
-    pickle_output_path = os.path.join(outputh_base_path, 'serialized_character_map_numpy_unique.pickle')
-    with open(pickle_output_path, 'wb') as f:
-        pickle.dump(unique_map, f, pickle.HIGHEST_PROTOCOL)
-
-    print('serializing regions_map')
-    for region in locations:
-        pickle_output_path = os.path.join(outputh_base_path, 'serialized_character_map_numpy_' + region + '.pickle')
-        with open(pickle_output_path, 'wb') as f:
-            pickle.dump(regions_map[region], f, pickle.HIGHEST_PROTOCOL)
-
-    print('serializing locales_map')
-    for region in locations:
-        for locale in locations[region]:
-            pickle_output_path = os.path.join(outputh_base_path, 'serialized_character_map_numpy_' + locale + '.pickle')
-            with open(pickle_output_path, 'wb') as f:
-                pickle.dump(locales_map[locale], f, pickle.HIGHEST_PROTOCOL)
-    return
-
-
-# TODO
-def make_db_gpu_ready(original_pickle_path, outputh_pickle_path):
-    """ makes the serialized characters map ready to be directly analyzed in gpu"""
-    return
-
-
-# TODO generate single files containing all the items, pets , mounts,... so to speed up processing
 ###############################################
 # GENERAL DISTANCE FUNCTIONS
 ##############
@@ -339,6 +129,8 @@ def euclidean_distance_normalized(stats_1, stats_2, max_distance):
     #     distance = distance / max_distance
     return distance / max_distance
 
+
+# TODO euclidean normalized not based on max distance
 
 ###############################################
 # CHARACTERS DISTANCE FUNCTIONS directly from JSONs
@@ -913,16 +705,6 @@ def distance_matrix_gym(distance_function, output_path):
     return
 
 
-##############
-# GPU
-
-
-def distance_matrix_gpu(characters_list, distance_function, output_path):
-    """ Compute the distance matrix in parallel through the gpu """
-
-    return
-
-
 ###############################################
 
 
@@ -1030,20 +812,19 @@ def main():
 
     # t = time.time()
     # with open(os.path.join(os.getcwd(), 'Results', 'serialized_character_map.pickle'), 'rb') as f:
-    # with open(os.path.join(os.getcwd(), 'Results', 'serialized_character_map_numpy.pickle'), 'rb') as f:
-    #     characters_map = pickle.load(f)
-    # logging.info('Pickle dataset Loaded')
+    with open(os.path.join(os.getcwd(), 'Results', 'serialized_character_map_numpy.pickle'), 'rb') as f:
+        characters_map = pickle.load(f)
+    logging.info('Pickle dataset Loaded')
     # print('Loading Time:' + str(time.time() - t))
     tstamp = time.time()
-    big_pickle_to_small_pickles(os.path.join(os.getcwd(), 'Results', 'serialized_character_map_numpy.pickle'),
-                                os.path.join(os.getcwd(), 'Results', 'CHARACTERS_DB_RELEVANT_GLOBAL.csv'),
-                                os.path.join(os.getcwd(), 'Results', 'PICKLES'))
+    # big_pickle_to_small_pickles(os.path.join(os.getcwd(), 'Results', 'serialized_character_map_numpy.pickle'),
+    #                             os.path.join(os.getcwd(), 'Results', 'CHARACTERS_DB_RELEVANT_GLOBAL.csv'),
+    #                             os.path.join(os.getcwd(), 'Results', 'PICKLES'))
+    show_distance_matrix(list(characters_map)[:1000], distance_general_from_map)
+
     logging.info('END')
     logging.info('Time:' + str(time.time() - tstamp))
     logging.info('#################################################################################################')
-
-
-#     TODO remove/resize the logging/profiling
 
 
 if __name__ == "__main__":
