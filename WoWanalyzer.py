@@ -582,20 +582,35 @@ def pickle_subsets(original_pickle_path, outputh_base_path, common_prefix):
     return
 
 
-def pickle_combining(class_pickle, level_pickle, output_path):
-    """ returns a pickle combining the common character of a certain level and class"""
-    logging.info('pickle_combining()')
-    with open(class_pickle, 'rb') as f:
-        class_map = pickle.load(f)
-    with open(level_pickle, 'rb') as f:
-        level_map = pickle.load(f)
+def pickle_intersection(pickle_1, pickle_2, output_path):
+    """ returns a pickle with the common character of the input pickles"""
+    logging.info('pickle_intersection()')
+    with open(pickle_1, 'rb') as f:
+        map_1 = pickle.load(f)
+    with open(pickle_2, 'rb') as f:
+        map_2 = pickle.load(f)
     intersection_map = {}
-    intersection = set(class_map.keys()).intersection(set(level_map.keys()))
+    intersection = set(map_1.keys()).intersection(set(map_2.keys()))
     for i in intersection:
-        intersection_map[i] = class_map[i]
+        intersection_map[i] = map_1[i]
 
     with open(output_path, 'wb') as f:
         pickle.dump(intersection_map, f, pickle.HIGHEST_PROTOCOL)
+
+    return
+
+
+def pickle_union(pickle_1, pickle_2, output_path):
+    """ returns a pickle joining the two given in input """
+    logging.info('pickle_union()')
+    with open(pickle_1, 'rb') as f:
+        map_1 = pickle.load(f)
+    with open(pickle_2, 'rb') as f:
+        map_2 = pickle.load(f)
+    map_1.update(map_2)
+
+    with open(output_path, 'wb') as f:
+        pickle.dump(map_1, f, pickle.HIGHEST_PROTOCOL)
 
     return
 
@@ -1424,11 +1439,16 @@ def main():
     # pickle_subsets(os.path.join('Results', 'DBs', 'serialized_character_map_numpy_global_unique.pickle'),
     #                os.path.join('Results', 'DBs'),
     #                'serialized_character_map_numpy_unique')
-    for c in range(1, 13):
-        print(str(c))
-        pickle_combining(os.path.join('Results', 'DBs', 'serialized_character_map_numpy_unique_c' + str(c) + '.pickle'),
-                         os.path.join('Results', 'DBs', 'serialized_character_map_numpy_unique_lv100.pickle'),
-                         os.path.join('Results', 'DBs','serialized_character_map_numpy_unique_c' + str(c) + '_lv100.pickle'))
+    # for c in range(1, 13):
+    #     print(str(c))
+    #     pickle_intersection(os.path.join('Results', 'DBs', 'serialized_character_map_numpy_unique_c' + str(c) + '.pickle'),
+    #                         os.path.join('Results', 'DBs', 'serialized_character_map_numpy_unique_lv100.pickle'),
+    #                         os.path.join('Results', 'DBs',
+    #                                   'serialized_character_map_numpy_unique_c' + str(c) + '_lv100.pickle'))
+    pickle_union(os.path.join('Results', 'DBs', 'serialized_character_map_numpy_unique_c8_lv100.pickle'),
+                 os.path.join('Results', 'DBs', 'serialized_character_map_numpy_unique_c10_lv100.pickle'),
+                 os.path.join('Results', 'DBs',
+                              'serialized_character_map_numpy_unique_c8-10_lv100.pickle'))
     #### SIMPLE ANALYTICAL STUFF
     print('===SIMPLE ANALYSIS')
 

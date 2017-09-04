@@ -717,6 +717,18 @@ def show_distance_matrix(characters_iterator, distance_function):
     plt.show()
 
 
+def show_distance_matrix_from_file(csv_path):
+    logging.info('show_distance_matrix_from_file')
+    d = pandas.read_csv(csv_path)
+    logging.info('loaded numpy matrix from csv')
+    # plt.matshow(d.reshape(len(characters_iterator), len(characters_iterator)), cmap="Reds")
+    plt.matshow(d, cmap="Reds")
+    logging.info('created matplotlib object')
+    plt.colorbar()
+    plt.show()
+    # plt.savefig('test.png')
+
+
 ###############################################
 # TEST-MAIN
 ##############

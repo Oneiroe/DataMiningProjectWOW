@@ -103,6 +103,93 @@ def distance_general_from_map(character_1_map, character_2_map):
     return distance / distance_dimensions
 
 
+def distance_appearance_from_map(character_1_map, character_2_map):
+    """ Return the distance measure between the two given characters according to appearance field """
+    # logging.debug('distance_general_from_map(' + str(os.path.basename(character_1_map)) + ', ' + str(os.path.basename(character_2_map)) + ')')
+    distance = 0.0
+    distance_dimensions = 1  # how many distance functions are used
+
+    # APPEARANCE
+    # len(character_1_map['appearance'])==8
+    distance += hamming_distance(character_1_map['appearance'], character_2_map['appearance']) / 8
+
+    return distance / distance_dimensions
+
+
+def distance_items_from_map(character_1_map, character_2_map):
+    """ Return the distance measure between the two given characters according to items field """
+    # logging.debug('distance_general_from_map(' + str(os.path.basename(character_1_map)) + ', ' + str(os.path.basename(character_2_map)) + ')')
+    distance = 0.0
+    distance_dimensions = 1  # how many distance functions are used
+
+    # ITEMS
+    distance += jaccard_distance(character_1_map['items'], character_2_map['items'])
+
+    return distance / distance_dimensions
+
+
+def distance_mounts_from_map(character_1_map, character_2_map):
+    """ Return the distance measure between the two given characters according to mounts field """
+    # logging.debug('distance_general_from_map(' + str(os.path.basename(character_1_map)) + ', ' + str(os.path.basename(character_2_map)) + ')')
+    distance = 0.0
+    distance_dimensions = 1  # how many distance functions are used
+
+    # MOUNTS
+    distance += jaccard_distance(character_1_map['mounts'], character_2_map['mounts'])
+
+    return distance / distance_dimensions
+
+
+def distance_pets_from_map(character_1_map, character_2_map):
+    """ Return the distance measure between the two given characters according to pets field """
+    # logging.debug('distance_general_from_map(' + str(os.path.basename(character_1_map)) + ', ' + str(os.path.basename(character_2_map)) + ')')
+    distance = 0.0
+    distance_dimensions = 1  # how many distance functions are used
+
+    # PETS
+    distance += jaccard_distance(character_1_map['pets'], character_2_map['pets'])
+
+    return distance / distance_dimensions
+
+
+def distance_professions_from_map(character_1_map, character_2_map):
+    """ Return the distance measure between the two given characters according to professions field """
+    # logging.debug('distance_general_from_map(' + str(os.path.basename(character_1_map)) + ', ' + str(os.path.basename(character_2_map)) + ')')
+    distance = 0.0
+    distance_dimensions = 1  # how many distance functions are used
+
+    # PROFESSIONS
+    distance += jaccard_distance(character_1_map['professions'], character_2_map['professions'])
+
+    return distance / distance_dimensions
+
+
+def distance_stats_from_map(character_1_map, character_2_map):
+    """ Return the distance measure between the two given characters according to stats field """
+    # logging.debug('distance_general_from_map(' + str(os.path.basename(character_1_map)) + ', ' + str(os.path.basename(character_2_map)) + ')')
+    distance = 0.0
+    distance_dimensions = 1  # how many distance functions are used
+
+    # STATS (normalized)
+    distance += euclidean_distance_normalized(character_1_map['stats'],
+                                              character_2_map['stats'],
+                                              max_distance=5990271.526328605)
+
+    return distance / distance_dimensions
+
+
+def distance_talents_from_map(character_1_map, character_2_map):
+    """ Return the distance measure between the two given characters according to talents field """
+    # logging.debug('distance_general_from_map(' + str(os.path.basename(character_1_map)) + ', ' + str(os.path.basename(character_2_map)) + ')')
+    distance = 0.0
+    distance_dimensions = 1  # how many distance functions are used
+
+    # TALENTS
+    distance += jaccard_distance(character_1_map['talents'], character_2_map['talents'])
+
+    return distance / distance_dimensions
+
+
 ###############################################
 # ANALYSIS
 ##############
@@ -143,6 +230,8 @@ def output_writer_listener(output_path, output_queue, characters_num):
             writer = csv.writer(output_file)
             while 1:
                 m = output_queue.get()
+                if m == 'stop':
+                    return
                 writer.writerow(m)
                 output_file.flush()
                 pbar_out.update(1)
@@ -171,42 +260,35 @@ def distance_matrix_multi(characters_list, distance_function, output_path):
                                distance_function,
                                output_queue) for i in range(characters_num))
         p.starmap(worker_row, row_pair_generator)
+        output_queue.put('stop')
+        watcher.get()
     return
 
 
 ######
-# Post-Processin
+# Post-Processing
 
 def sort_distance_matrix(original_csv_path, output_path):
     """ Sort in the right order the multi processing result"""
     logging.info('sort_distance_matrix()')
     app_indices = {}
-    # app_seek = {}
-    characters_num = 15906
-    characters_num = 372
+    characters_num = 0
     # Pass-1 build index
     with open(original_csv_path, 'r', newline='', encoding='utf-8') as input_file:
         reader = csv.reader(input_file, delimiter=',')
-        with tqdm(total=characters_num) as pbar:
-            i = 0
-            for row in reader:
-                pbar.update(1)
-                app_indices[row.count('')] = i
-                # app_seek[row.count('')] = input_file.tell()
-                i += 1
+        for row in reader:
+            app_indices[row.count('')] = characters_num
+            # app_seek[row.count('')] = input_file.tell()
+            characters_num += 1
         # Pass-2 write
         input_file.seek(0)
         with open(output_path, 'w', newline='', encoding='utf-8') as output_file:
             with tqdm(total=characters_num) as pbar:
-                l=input_file.readlines()
+                l = input_file.readlines()
                 for i in range(characters_num):
                     pbar.update(1)
                     index = app_indices[i]
-                    # input_file.readlines(index)
-                    # for _ in range(index):
-                    #     input_file.readline()
                     output_file.write(l[index])
-                    # input_file.seek(0)
 
     return
 
@@ -239,29 +321,51 @@ def main():
 
     # with open(os.path.join(os.getcwd(), 'Results', 'serialized_character_map_numpy.pickle'), 'rb') as f:
     locale = 'de_DE'
+    c = '8-10'
+    lv = '100'
     with open(os.path.join(os.getcwd(),
-                           # 'Results',
-                           # 'PICKLES',
-                           # 'serialized_character_map_numpy_unique.pickle'), 'rb') as f:
-                           # 'serialized_character_map_numpy_' + locale + '.pickle'), 'rb') as f:
-                           'serialized_test_c12_lv100.pickle'), 'rb') as f:
+                           'Results',
+                           'DBs',
+                           'serialized_character_map_numpy_unique_c' + c + '_lv' + lv + '.pickle'), 'rb') as f:
         characters_map = pickle.load(f)
     # # characters_list = list(characters_map.values())[:2000]
     characters_list = tuple(characters_map.values())
-    # # characters_map = None  # space saving
-    # del characters_map  # space saving
-    # logging.info('Pickle dataset Loaded')
+    del characters_map  # space saving
+    logging.info('Pickle dataset Loaded')
     # print('characters_list (bytes): ' + str(sys.getsizeof(characters_list)))
     # # print('Loading Time:' + str(time.time() - t))
     tstamp = time.time()
     # # distance_matrix_sequential(characters_list, distance_general_from_map, 'test_matrix.csv')
-    # distance_matrix_multi(characters_list, distance_general_from_map, 'matrix_' + locale + '.csv')
-    distance_matrix_multi(characters_list, distance_general_from_map, 'matrix_test_12_100.csv')
+    distances = [
+        (distance_general_from_map, 'general'),
+        (distance_appearance_from_map, 'appearance'),
+        (distance_items_from_map, 'items'),
+        (distance_mounts_from_map, 'mounts'),
+        (distance_pets_from_map, 'pets'),
+        (distance_professions_from_map, 'professions'),
+        (distance_stats_from_map, 'stats'),
+        (distance_talents_from_map, 'talents')
+    ]
+    for d_function, str_dist in distances:
+        print(str_dist)
+        distance_matrix_multi(characters_list,
+                              d_function,
+                              os.path.join(os.getcwd(),
+                                           'Results',
+                                           'similarity',
+                                           'matrix_c' + c + '_lv' + lv + '[' + str_dist + ']' + '.csv'))
+        # del characters_list
 
-    # sort_distance_matrix('matrix_' + locale + '.csv', 'matrix_sorted_' + locale + '.csv')
-    sort_distance_matrix('matrix_test_12_100.csv', 'matrix_test_sorted_12_100.csv')
+        sort_distance_matrix(os.path.join(os.getcwd(),
+                                          'Results',
+                                          'similarity',
+                                          'matrix_c' + c + '_lv' + lv + '[' + str_dist + ']' + '.csv'),
+                             os.path.join(os.getcwd(),
+                                          'Results',
+                                          'similarity',
+                                          'sorted_matrix_c' + c + '_lv' + lv + '[' + str_dist + ']' + '.csv'))
 
-    #     wolfram alpha folmula for expectation, where sec=avg second to complete a full row
+    # wolfram alpha folmula for expectation, where sec=avg second to complete a full row
     #     sum (n/(235888/x)), 1<=n<=235888,x=20
     logging.info('END')
     logging.info('Time:' + str(time.time() - tstamp))
