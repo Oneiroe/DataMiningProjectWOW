@@ -128,7 +128,18 @@ def euclidean_distance_normalized(stats_1, stats_2, max_distance):
     return distance / max_distance
 
 
-# TODO euclidean normalized not based on max distance
+def canberra_distance(vector_1, vector_2):
+    """ The Canberra distance between two n-dimensional point is
+    the sum of the difference/summ of each dimension components"""
+
+    return sum(abs(a - b) / (abs(a) + abs(b) + 0.000000000000000000000000000000001) for a, b in zip(vector_1, vector_2))
+
+
+def canberra_distance_normalized(vector_1, vector_2):
+    """ Camberra distance normalized over the number of vectors dimesions """
+    n_dim = len(vector_1)
+    return sum(abs(a - b) / (abs(a) + abs(b) + 0.0000000000000000000000001) for a, b in zip(vector_1, vector_2)) / n_dim
+
 
 ###############################################
 # CHARACTERS DISTANCE FUNCTIONS directly from JSONs
@@ -706,28 +717,6 @@ def sort_distance_matrix(original_csv_path, output_path):
 
 
 ###############################################
-# VISUALIZATION
-##############
-def show_distance_matrix(characters_iterator, distance_function):
-    d = np.array([distance_function(x, y) for x in characters_iterator for y in characters_iterator])
-    plt.matshow(d.reshape(len(characters_iterator), len(characters_iterator)), cmap="Reds")
-    plt.colorbar()
-    plt.show()
-
-
-def show_distance_matrix_from_file(csv_path):
-    logging.info('show_distance_matrix_from_file')
-    d = pandas.read_csv(csv_path)
-    logging.info('loaded numpy matrix from csv')
-    # plt.matshow(d.reshape(len(characters_iterator), len(characters_iterator)), cmap="Reds")
-    plt.matshow(d, cmap="Reds")
-    logging.info('created matplotlib object')
-    plt.colorbar()
-    plt.show()
-    # plt.savefig('test.png')
-
-
-###############################################
 # TEST-MAIN
 ##############
 def main():
@@ -749,6 +738,64 @@ def main():
         'US': ['en_US', 'pt_BR', 'es_MX']
     }
     stats_max_dist_global = 5990271.526328605
+
+    # with open(os.path.join(os.getcwd(), 'Results', 'serialized_character_map_numpy.pickle'), 'rb') as f:
+    locale = 'zh_TW'
+    c = '8-10'
+    lv = '100'
+    with open(os.path.join(os.getcwd(),
+                           'Results',
+                           'DBs',
+                           'serialized_character_map_numpy_unique_c' + c + '_lv' + lv + '.pickle'), 'rb') as f:
+        # 'serialized_character_map_numpy_unique_c' + c + '.pickle'), 'rb') as f:
+        # 'serialized_character_map_numpy_unique_' + locale + '.pickle'), 'rb') as f:
+        characters_map = pickle.load(f)
+    characters_list = list(characters_map.values())[:1000]
+    # characters_list = list(characters_map.values())
+    # characters_list.sort(key=lambda k: (k['class'], k['level']))
+    del characters_map  # space saving
+
+    tstamp = time.time()
+    # # distance_matrix_sequential(characters_list, distance_general_from_map, 'test_matrix.csv')
+    distances = [
+        (distance_general_from_map, 'general'),
+        (distance_appearance_from_map, 'appearance'),
+        (distance_items_from_map, 'items'),
+        (distance_mounts_from_map, 'mounts'),
+        (distance_pets_from_map, 'pets'),
+        (distance_professions_from_map, 'professions'),
+        (distance_stats_from_map, 'stats'),
+        (distance_talents_from_map, 'talents')
+    ]
+    for d_function, str_dist in distances:
+        print(str_dist)
+        distance_matrix_multi(characters_list,
+                              d_function,
+                              os.path.join(os.getcwd(),
+                                           'Results',
+                                           'similarity',
+                                           'matrix_c' + c + '_lv' + lv + '[' + str_dist + ']' + '.csv'))
+        # 'matrix_c' + c + '[' + str_dist + ']' + '.csv'))
+        # 'matrix_c' + locale + '[' + str_dist + ']' + '.csv'))
+        # del characters_list
+
+        sort_distance_matrix(os.path.join(os.getcwd(),
+                                          'Results',
+                                          'similarity',
+                                          'matrix_c' + c + '_lv' + lv + '[' + str_dist + ']' + '.csv'),
+                             # 'matrix_c' + c + '[' + str_dist + ']' + '.csv'),
+                             # 'matrix_c' + locale + '[' + str_dist + ']' + '.csv'),
+                             os.path.join(os.getcwd(),
+                                          'Results',
+                                          'similarity',
+                                          'sorted_matrix_c' + c + '_lv' + lv + '[' + str_dist + ']' + '.csv'))
+        # 'sorted_matrix_c' + c + '[' + str_dist + ']' + '.csv'))
+        # 'sorted_matrix_c' + locale + '[' + str_dist + ']' + '.csv'))
+
+    # wolfram alpha folmula for expectation, where sec=avg second to complete a full row
+    #     sum (n/(235888/x)), 1<=n<=235888,x=20
+    logging.info('END')
+    logging.info('Time:' + str(time.time() - tstamp))
 
     logging.info('#################################################################################################')
 
