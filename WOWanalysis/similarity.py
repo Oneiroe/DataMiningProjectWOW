@@ -2,9 +2,7 @@
 Algorithms to compute the similarity among characters
 """
 
-import itertools
 import time
-import random
 import math
 import sys
 import os
@@ -15,14 +13,14 @@ import csv
 import numpy as np
 import matplotlib.pyplot as plt
 import pickle
-import threading
 import multiprocessing
 from multiprocessing import Process, Pool, Value, Array, Lock, current_process
 import pandas
+import psutil
 
 
 ###############################################
-# PREPROCESSING
+# PRE-PROCESSING
 ##############
 
 def characters_stats_max_min_mean(DB_BASE_PATH, locations):
@@ -220,7 +218,6 @@ def distance_mounts(character_1_json_path, character_2_json_path):
     return distance
 
 
-# TODO pets can be consistently personalized, not just owned
 def distance_pets(character_1_json_path, character_2_json_path):
     """ Return the distance measure between the two given characters according to their "pets" fields """
     logging.debug('distance_pets(' + str(character_1_json_path) + ', ' + str(character_2_json_path) + ')')
@@ -369,19 +366,6 @@ def distance_talents(character_1_json_path, character_2_json_path):
     return distance
 
 
-@DeprecationWarning
-def distance_general_inefficient(character_1_json_path, character_2_json_path):
-    """ Return the average distance measure between the two given characters according to all the defined distances """
-    logging.debug('distance_general(' + str(character_1_json_path) + ', ' + str(character_2_json_path) + ')')
-    distance_functions = [distance_appearance, distance_items, distance_mounts, distance_pets, distance_professions,
-                          distance_stats_normalized, distance_talents]
-    distance = 0.0
-    for f in distance_functions:
-        distance += f(character_1_json_path, character_2_json_path)
-
-    return distance / len(distance_functions)
-
-
 def distance_general(character_1_json_path, character_2_json_path):
     """ Return the average distance measure between the two given characters according to all the defined distances
     opening the files just once """
@@ -495,7 +479,7 @@ def distance_general(character_1_json_path, character_2_json_path):
 
 
 ###############################################
-# CHARACTERS DISTANCE FUNCTIONS from serialized map
+# CHARACTERS DISTANCE FUNCTIONS from serialized dict
 ##############
 def distance_general_from_map(character_1_map, character_2_map):
     """ Return the average distance measure between the two given characters according to all the defined distances
@@ -531,13 +515,100 @@ def distance_general_from_map(character_1_map, character_2_map):
     return distance / distance_dimensions
 
 
+def distance_appearance_from_map(character_1_map, character_2_map):
+    """ Return the distance measure between the two given characters according to appearance field """
+    # logging.debug('distance_general_from_map(' + str(os.path.basename(character_1_map)) + ', ' + str(os.path.basename(character_2_map)) + ')')
+    distance = 0.0
+    distance_dimensions = 1  # how many distance functions are used
+
+    # APPEARANCE
+    # len(character_1_map['appearance'])==8
+    distance += hamming_distance(character_1_map['appearance'], character_2_map['appearance']) / 8
+
+    return distance / distance_dimensions
+
+
+def distance_items_from_map(character_1_map, character_2_map):
+    """ Return the distance measure between the two given characters according to items field """
+    # logging.debug('distance_general_from_map(' + str(os.path.basename(character_1_map)) + ', ' + str(os.path.basename(character_2_map)) + ')')
+    distance = 0.0
+    distance_dimensions = 1  # how many distance functions are used
+
+    # ITEMS
+    distance += jaccard_distance(character_1_map['items'], character_2_map['items'])
+
+    return distance / distance_dimensions
+
+
+def distance_mounts_from_map(character_1_map, character_2_map):
+    """ Return the distance measure between the two given characters according to mounts field """
+    # logging.debug('distance_general_from_map(' + str(os.path.basename(character_1_map)) + ', ' + str(os.path.basename(character_2_map)) + ')')
+    distance = 0.0
+    distance_dimensions = 1  # how many distance functions are used
+
+    # MOUNTS
+    distance += jaccard_distance(character_1_map['mounts'], character_2_map['mounts'])
+
+    return distance / distance_dimensions
+
+
+def distance_pets_from_map(character_1_map, character_2_map):
+    """ Return the distance measure between the two given characters according to pets field """
+    # logging.debug('distance_general_from_map(' + str(os.path.basename(character_1_map)) + ', ' + str(os.path.basename(character_2_map)) + ')')
+    distance = 0.0
+    distance_dimensions = 1  # how many distance functions are used
+
+    # PETS
+    distance += jaccard_distance(character_1_map['pets'], character_2_map['pets'])
+
+    return distance / distance_dimensions
+
+
+def distance_professions_from_map(character_1_map, character_2_map):
+    """ Return the distance measure between the two given characters according to professions field """
+    # logging.debug('distance_general_from_map(' + str(os.path.basename(character_1_map)) + ', ' + str(os.path.basename(character_2_map)) + ')')
+    distance = 0.0
+    distance_dimensions = 1  # how many distance functions are used
+
+    # PROFESSIONS
+    distance += jaccard_distance(character_1_map['professions'], character_2_map['professions'])
+
+    return distance / distance_dimensions
+
+
+def distance_stats_from_map(character_1_map, character_2_map):
+    """ Return the distance measure between the two given characters according to stats field """
+    # logging.debug('distance_general_from_map(' + str(os.path.basename(character_1_map)) + ', ' + str(os.path.basename(character_2_map)) + ')')
+    distance = 0.0
+    distance_dimensions = 1  # how many distance functions are used
+
+    # STATS (normalized)
+    distance += euclidean_distance_normalized(character_1_map['stats'],
+                                              character_2_map['stats'],
+                                              max_distance=5990271.526328605)
+
+    return distance / distance_dimensions
+
+
+def distance_talents_from_map(character_1_map, character_2_map):
+    """ Return the distance measure between the two given characters according to talents field """
+    # logging.debug('distance_general_from_map(' + str(os.path.basename(character_1_map)) + ', ' + str(os.path.basename(character_2_map)) + ')')
+    distance = 0.0
+    distance_dimensions = 1  # how many distance functions are used
+
+    # TALENTS
+    distance += jaccard_distance(character_1_map['talents'], character_2_map['talents'])
+
+    return distance / distance_dimensions
+
+
 ###############################################
 # ANALYSIS
 ##############
 # SEQUENTIAL
-def distance_matrix(characters_list, distance_function, output_path):
+def distance_matrix_sequential(characters_list, distance_function, output_path):
     """ Write a file containing the distance matrix (triangle) """
-    logging.debug('distance_matrix()')
+    logging.debug('distance_matrix_sequential()')
 
     characters_num = len(characters_list)
     with open(output_path, 'w', newline='', encoding='utf-8') as output_file:
@@ -556,158 +627,85 @@ def distance_matrix(characters_list, distance_function, output_path):
 
 ##############
 # Multi Process
-# TODO fix scalability
+
+def worker_row(i, characters_list, characters_num, distance_function, output_queue):
+    row = [None] * i
+    for j in range(i, characters_num):
+        row += [distance_function(characters_list[i], characters_list[j])]
+    output_queue.put(row)
+    return row
 
 
-def multiprocess_distance_app(i, character_pivot, character_list, output_queue, distance_function):
-    # with tqdm(total=len(character_list)) as pbar:
-    out_line = [None for j in range(i)]
-    for j in character_list:
-        # pbar.update(1)
-        out_line += [distance_function(character_pivot, j)]
-    output_queue.put(out_line)
-    return out_line
+def output_writer_listener(output_path, output_queue, characters_num):
+    with open(output_path, 'w', newline='', encoding='utf-8') as output_file:
+        with tqdm(total=characters_num) as pbar_out:
+            writer = csv.writer(output_file)
+            while 1:
+                m = output_queue.get()
+                if m == 'stop':
+                    return
+                writer.writerow(m)
+                output_file.flush()
+                pbar_out.update(1)
 
 
-def output_writer_listener(output_path, output_queue):
-    with open(output_path, 'a', newline='', encoding='utf-8') as output_file:
-        # with tqdm(total=235888) as pbar_out:
-        # with tqdm(total=2000) as pbar_out:
-        writer = csv.writer(output_file)
-        while 1:
-            m = output_queue.get()
-            if m == 'kill':
-                break
-            writer.writerow(m)
-            output_file.flush()
-            # pbar_out.update(1)
-
-
-def distance_matrix_multiprocessing(characters_list, distance_function, output_path):
-    """ Write a file containing the distance matrix (triangle) thorough multiprocessing """
-    logging.info('distance_matrix_multiprocessing()')
-
+def distance_matrix_multi(characters_list, distance_function, output_path):
+    """ Write distance matrix in parallel """
+    logging.info('distance_matrix_multi()')
     characters_num = len(characters_list)
     manager = multiprocessing.Manager()
     output_queue = manager.Queue()
-    #
-    # empty the output file
-    open(output_path, 'w', newline='', encoding='utf-8').close()
-
-    ### All dataset in memory before writing
-    with multiprocessing.Pool(multiprocessing.cpu_count()) as p:
-        watcher = p.apply_async(output_writer_listener, (output_path, output_queue))
+    # with Pool(multiprocessing.cpu_count()) as p:
+    logging.info('Available Memory (Mb): ' + str(psutil.virtual_memory().available / (1024 * 1024)))
+    logging.info('Process Size (Mb): ' + str(psutil.Process(os.getpid()).memory_info().rss / float(2 ** 20)))
+    logging.info('#Process fitting in memory: ' + str(int((psutil.virtual_memory().available / (1024 * 1024)) / (
+        psutil.Process(os.getpid()).memory_info().rss / float(2 ** 20))) + 1))
+    process_number = min(multiprocessing.cpu_count(),
+                         int((psutil.virtual_memory().available / (1024 * 1024)) / (
+                             psutil.Process(os.getpid()).memory_info().rss / float(2 ** 20))) + 1
+                         )
+    with Pool(process_number) as p:
+        watcher = p.apply_async(output_writer_listener, (output_path, output_queue, characters_num))
         row_pair_generator = ((i,
-                               characters_list[i],
-                               characters_list[i:characters_num],
-                               output_queue,
-                               distance_function) for i in range(characters_num))
-        p.starmap(multiprocess_distance_app, row_pair_generator)
-        # output_queue.put('kill')
+                               characters_list,
+                               characters_num,
+                               distance_function,
+                               output_queue) for i in range(characters_num))
+        p.starmap(worker_row, row_pair_generator)
+        output_queue.put('stop')
+        watcher.get()
     return
 
-    ### CHUNCKED VERSION with map
-    # break_chunk = 1000
-    # with tqdm(total=characters_num) as pbar:
-    #     for j in range(0, characters_num, break_chunk):
-    #         # with multiprocessing.Pool(multiprocessing.cpu_count()) as p:
-    #         with multiprocessing.Pool(2) as p:
-    #             watcher = p.apply_async(output_writer_listener, (output_path, output_queue))
-    #             if j + break_chunk < characters_num:
-    #                 row_pair_generator = ((i,
-    #                                        characters_list[i],
-    #                                        characters_list[i:characters_num],
-    #                                        output_queue,
-    #                                        distance_function) for i in range(j, j + break_chunk))
-    #             else:
-    #                 row_pair_generator = ((i,
-    #                                        characters_list[i],
-    #                                        characters_list[i:characters_num],
-    #                                        output_queue,
-    #                                        distance_function) for i in range(j, characters_num))
-    #             p.starmap(multiprocess_distance_app, row_pair_generator)
-    #         pbar.update(break_chunk)
-    # return
 
+##############
+# Multi Post-Processing
 
-######
-# Multi bo
-characters_list = []
-
-
-def gym_distance_app(i, characters_num, output_queue, distance_function):
-    # global characters_list
-    # with tqdm(total=len(character_list)) as pbar:
-    out_line = [None for j in range(i)]
-    for j in range(i, characters_num):
-        # pbar.update(1)
-        out_line += [distance_function(characters_list[i], characters_list[j])]
-    output_queue.put(out_line)
-    return out_line
-
-
-def gym_writer_listener(output_path, output_queue):
-    with open(output_path, 'a', newline='', encoding='utf-8') as output_file:
-        # with tqdm(total=235888) as pbar_out:
-        # with tqdm(total=2000) as pbar_out:
-        writer = csv.writer(output_file)
-        while 1:
-            m = output_queue.get()
-            if m == 'kill':
-                break
-            writer.writerow(m)
-            output_file.flush()
-            # pbar_out.update(1)
-
-
-def gym_init(c_list):
-    global characters_list
-    characters_list = c_list
-
-
-def distance_matrix_gym(distance_function, output_path):
-    """ Write a file containing the distance matrix (triangle) thorough multiprocessing """
-    logging.info('distance_matrix_gym()')
-
-    characters_num = len(characters_list)
-    manager = multiprocessing.Manager()
-    output_queue = manager.Queue()
-    #
-    # empty the output file
-    # open(output_path, 'w', newline='', encoding='utf-8').close()
-
-    ### CHUNCKED VERSION with map
-    # break_chunk = multiprocessing.cpu_count()
-    break_chunk = 100
-    with tqdm(total=characters_num) as pbar:
+def sort_distance_matrix(original_csv_path, output_path):
+    """ Sort in the right order the multi processing result"""
+    logging.info('sort_distance_matrix()')
+    app_indices = {}
+    characters_num = 0
+    # Pass-1 build index
+    with open(original_csv_path, 'r', newline='', encoding='utf-8') as input_file:
+        reader = csv.reader(input_file, delimiter=',')
+        for row in reader:
+            app_indices[row.count('')] = characters_num
+            # app_seek[row.count('')] = input_file.tell()
+            characters_num += 1
+        # Pass-2 write
+        input_file.seek(0)
         with open(output_path, 'w', newline='', encoding='utf-8') as output_file:
-            writer = csv.writer(output_file)
-            for j in range(0, characters_num, break_chunk):
-                # with multiprocessing.Pool(1, initializer=gym_init, initargs=(characters_list,)) as p:
-                with multiprocessing.Pool(2) as p:
-                    # watcher = p.apply_async(gym_writer_listener, (output_path, output_queue))
-                    if j + break_chunk < characters_num:
-                        row_pair_generator = ((i,
-                                               characters_num,
-                                               output_queue,
-                                               distance_function) for i in range(j, j + break_chunk))
-                    else:
-                        row_pair_generator = ((i,
-                                               characters_num,
-                                               output_queue,
-                                               distance_function) for i in range(j, characters_num))
-                    p.starmap(gym_distance_app, row_pair_generator)
+            with tqdm(total=characters_num) as pbar:
+                l = input_file.readlines()
+                for i in range(characters_num):
+                    pbar.update(1)
+                    index = app_indices[i]
+                    output_file.write(l[index])
 
-                for _ in range(break_chunk):
-                    writer.writerow(output_queue.get())
-
-                pbar.update(break_chunk)
     return
 
 
 ###############################################
-
-
 # VISUALIZATION
 ##############
 def show_distance_matrix(characters_iterator, distance_function):
@@ -750,92 +748,8 @@ def main():
         'TW': ['zh_TW'],
         'US': ['en_US', 'pt_BR', 'es_MX']
     }
-
-    # maximum, minimum, mean = characters_stats_max_min_mean(DB_BASE_PATH, locations)
-    stats_maximum_global = {'agi': 44923, 'armor': 78232, 'avoidanceRating': 892.0, 'avoidanceRatingBonus': 20.0,
-                            'block': 129.9673, 'blockRating': 0, 'crit': 134.29715, 'critRating': 24400,
-                            'dodge': 1103.7595,
-                            'dodgeRating': 11543, 'haste': 132.06, 'hasteRating': 19220,
-                            'hasteRatingPercent': 115.55567,
-                            'health': 5693023, 'int': 46425, 'leech': 102.430435, 'leechRating': 878.0,
-                            'leechRatingBonus': 20.25, 'mainHandDmgMax': 100274.0, 'mainHandDmgMin': 90031.0,
-                            'mainHandDps': 58630.99, 'mainHandSpeed': 3.8, 'mana5': 148265.0, 'mana5Combat': 148265.0,
-                            'mastery': 418.2, 'masteryRating': 25380, 'offHandDmgMax': 40387.0,
-                            'offHandDmgMin': 38875.0,
-                            'offHandDps': 27425.393, 'offHandSpeed': 3.8, 'parry': 116.17902, 'parryRating': 16055,
-                            'power': 1838164, 'rangedDmgMax': 60618.0, 'rangedDmgMin': 51016.0, 'rangedDps': 23017.041,
-                            'rangedSpeed': 3.253, 'speedRating': 1089.0, 'speedRatingBonus': 18.596735,
-                            'spellCrit': 134.29715, 'spellCritRating': 24400, 'spellPen': 0, 'sta': 82710, 'str': 36373,
-                            'versatility': 12720, 'versatilityDamageDoneBonus': 49.86,
-                            'versatilityDamageTakenBonus': 24.93,
-                            'versatilityHealingDoneBonus': 49.86}
-    stats_minimum_global = {'agi': 5, 'armor': 0, 'avoidanceRating': 0.0, 'avoidanceRatingBonus': 0.0, 'block': 0.0,
-                            'blockRating': 0, 'crit': 0.0, 'critRating': 0, 'dodge': 0.0, 'dodgeRating': 0,
-                            'haste': -27.033333, 'hasteRating': 0, 'hasteRatingPercent': 0.0, 'health': 306, 'int': 9,
-                            'leech': -60.0, 'leechRating': -60.0, 'leechRatingBonus': 0.0, 'mainHandDmgMax': 1.0,
-                            'mainHandDmgMin': 0.0, 'mainHandDps': 0.125, 'mainHandSpeed': 0.667, 'mana5': 0.0,
-                            'mana5Combat': 0.0, 'mastery': 0.0, 'masteryRating': 0, 'offHandDmgMax': 0.0,
-                            'offHandDmgMin': 0.0, 'offHandDps': 0.0, 'offHandSpeed': 0.667, 'parry': 0.0,
-                            'parryRating': 0,
-                            'power': 0, 'rangedDmgMax': -1.0, 'rangedDmgMin': -1.0, 'rangedDps': -1.0,
-                            'rangedSpeed': -1.0,
-                            'speedRating': -30.518183, 'speedRatingBonus': 0.0, 'spellCrit': 0.0017,
-                            'spellCritRating': 0,
-                            'spellPen': 0, 'sta': 17, 'str': 5, 'versatility': 0, 'versatilityDamageDoneBonus': 0.0,
-                            'versatilityDamageTakenBonus': 0.0, 'versatilityHealingDoneBonus': 0.0}
-    stats_mean_global = {'agi': 4672.277258699044, 'armor': 2001.4727582581563, 'avoidanceRating': 1.1033004669121393,
-                         'avoidanceRatingBonus': 0.6885062033465073, 'block': 1.3070891963135096, 'blockRating': 0.0,
-                         'crit': 19.73010125068563, 'critRating': 2254.2289264396663, 'dodge': 6.478166307476653,
-                         'dodgeRating': 25.950705419521128, 'haste': 16.06888523653173,
-                         'hasteRating': 2158.5366572271587,
-                         'hasteRatingPercent': 13.908714036594885, 'health': 807942.6857703656,
-                         'int': 7015.019343925931,
-                         'leech': 0.26359496126975535, 'leechRating': 1.0811484874981898,
-                         'leechRatingBonus': 0.2476907445228239, 'mainHandDmgMax': 10017.458861832734,
-                         'mainHandDmgMin': 8765.198996981619, 'mainHandDps': 3855.6615863063903,
-                         'mainHandSpeed': 2.2483025800377368, 'mana5': 9009.75571881571,
-                         'mana5Combat': 8805.484450247575,
-                         'mastery': 49.83102065901402, 'masteryRating': 2645.372286847996,
-                         'offHandDmgMax': 3091.2397536118838, 'offHandDmgMin': 2875.3589754459745,
-                         'offHandDps': 1586.8783813258156, 'offHandSpeed': 1.8170947186799526,
-                         'parry': 4.011504966751173,
-                         'parryRating': 114.33363714983382, 'power': 154321.02565200435,
-                         'rangedDmgMax': 656.4463558977142,
-                         'rangedDmgMin': 628.8855558570169, 'rangedDps': 240.6216909360749,
-                         'rangedSpeed': -0.8339633597300509, 'speedRating': 28.23419487996765,
-                         'speedRatingBonus': 0.5558401780802803, 'spellCrit': 20.06153050474746,
-                         'spellCritRating': 2254.2282481516654, 'spellPen': 0.0, 'sta': 13278.711697924438,
-                         'str': 3836.495574170793, 'versatility': 1540.4860611815777,
-                         'versatilityDamageDoneBonus': 8.622942339860389,
-                         'versatilityDamageTakenBonus': 4.311471171076854,
-                         'versatilityHealingDoneBonus': 8.622942339860389}
     stats_max_dist_global = 5990271.526328605
 
-    # locale = 'it_IT'
-    # region = 'EU'
-    # DB_LOCALE_PATH = os.path.join(DB_BASE_PATH, region, locale)
-    # CHARACTER_PATH = os.path.join(DB_LOCALE_PATH, 'character')
-    # characters_iterator = list(
-    #     os.path.join(CHARACTER_PATH, x) for x in os.listdir(CHARACTER_PATH) if x.endswith('.json'))
-    # distance_matrix(characters_iterator[:25], distance_general, 'test_matrix.csv')
-
-    # one_pass_characters_info_to_file(DB_BASE_PATH, {'EU': ['it_IT']}, os.path.join(os.getcwd(), 'Results'))
-    # one_pass_characters_info_to_file(DB_BASE_PATH, locations, os.path.join(os.getcwd(), 'Results'))
-
-    # t = time.time()
-    # with open(os.path.join(os.getcwd(), 'Results', 'serialized_character_map.pickle'), 'rb') as f:
-    with open(os.path.join(os.getcwd(), 'Results', 'serialized_character_map_numpy.pickle'), 'rb') as f:
-        characters_map = pickle.load(f)
-    logging.info('Pickle dataset Loaded')
-    # print('Loading Time:' + str(time.time() - t))
-    tstamp = time.time()
-    # big_pickle_to_small_pickles(os.path.join(os.getcwd(), 'Results', 'serialized_character_map_numpy.pickle'),
-    #                             os.path.join(os.getcwd(), 'Results', 'CHARACTERS_DB_RELEVANT_GLOBAL.csv'),
-    #                             os.path.join(os.getcwd(), 'Results', 'PICKLES'))
-    show_distance_matrix(list(characters_map)[:1000], distance_general_from_map)
-
-    logging.info('END')
-    logging.info('Time:' + str(time.time() - tstamp))
     logging.info('#################################################################################################')
 
 
