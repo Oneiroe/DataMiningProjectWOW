@@ -1,6 +1,7 @@
 library(treemap)
-library(d3Tree)
+library(d3treeR)
 library(data.tree)
+library(tibble)
 
 # data import
 data_plot_path <- "PATH"
@@ -303,14 +304,32 @@ data_ception = data.frame(
   value
 )
 
+
+# OUTPUT
+png(filename = "itemsets_treemap.png",
+    width = 1920,
+    height = 1080)
+
 t = treemap(
   data,
   index = c("group",
             "subgroup"),
   vSize = "value",
   type = "index",
-  title = "threshold:0.001"
+  title = "threshold:0.001",
+  align.labels=list(
+    c("center", "center"), 
+    c("center", "bottom")
+  ),
+  palette = "Set2"
 )
+
+dev.off()
+
+
+interactive = d3tree2(t)
+htmlwidgets::saveWidget(interactive, "itemsets_treemap_interactive.html")
+
 t_ception = treemap(
   data_ception,
   index = c(
@@ -336,16 +355,13 @@ t_ception = treemap(
   ),
   vSize = "value",
   type = "depth",
-  title = "threshold:0.001"
+  title = "threshold:0.001",
+  align.labels=list(
+    c("center", "center"), 
+    c("center", "bottom")
+  )
 )
-d3tree2(t)
 d3tree2(t_ception)
-
-# OUTPUT
-png(filename = "itemsets_treemap.png",
-    width = 1920,
-    height = 1080)
-
-# GRAPH-HERE
-
-dev.off()
+interactive_nested = d3tree2(t_ception)
+htmlwidgets::saveWidget(interactive_nested,
+                        "itemsets_treemap_interactive_nested.html")
