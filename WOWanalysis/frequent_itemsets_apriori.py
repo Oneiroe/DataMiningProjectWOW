@@ -11,7 +11,7 @@ import logging
 from tqdm import tqdm
 import json
 import csv
-
+import pickle
 
 ###############################################
 # A-PRIORI ALGORITHMs
@@ -437,26 +437,24 @@ def join_class_level_locale_characters_itemets(results_path, output_base_path, c
             i.close()
 
 
+def create_itemsets_from_pickle(pickle_path, output_path):
+    """ Output a .dat file with the itemsets from a given serialized pickle object """
+    logging.info('create_itemsets_from_pickle()')
+    with open(pickle_path, 'rb') as f:
+        characters_map = pickle.load(f)
+    with open(output_path, 'w', newline='', encoding='utf-8') as output:
+        writer = csv.writer(output, delimiter=' ')
+        with tqdm(total=len(characters_map)) as pbar:
+            for character in characters_map:
+                pbar.update(1)
+                writer.writerow(characters_map[character]['items'])
+    return
+
+
 def create_all_itemsets_one_pass(locales_map, DB_BASE_PATH, output_base_path, classes):
     """ Create all the itemsets (general, total, per locale, level, class,...) scanning the dataset only once. """
     # TODO
     return
-
-
-def itemsets_dataset_infos(itemsets_path):
-    """ Returns few stats about the dataset of the itemsets,
-    i.e. set and number of distinct items, number of baskets, distribution of baskets lenght
-    """
-    distinct_items = set()
-    basket_lengths = {}
-    with open(itemsets_path, "r") as input_file:
-        reader = csv.reader(input_file, delimiter=' ')
-        for basket in reader:
-            for item in basket:
-                distinct_items.add(item)
-            basket_lengths.setdefault(len(basket), 0)
-            basket_lengths[len(basket)] += 1
-    return distinct_items, basket_lengths
 
 
 ###############################################
