@@ -110,3 +110,8 @@ itemsets_stacked_area <-
     dev.off()
     return()
   }
+
+args = commandArgs(trailingOnly = TRUE)
+if (length(args) == 2) {
+  itemsets_stacked_area(args[1], args[2])
+}
