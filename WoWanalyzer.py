@@ -159,7 +159,7 @@ def clean_json_dataset():
     return tot_operations
 
 
-# TODO
+@NotImplementedError
 def clean_duplicates():
     """ Move to special folders duplicates entries, leaving the more useful (ie. containing more info) """
     pass
@@ -464,9 +464,27 @@ def one_pass_characters(output_path, locations):
     return
 
 
-def csv_unique(original_csv_path, output_path):
+def csv_unique(original_csv_path, pickle_unique_path, output_path):
     """ Returns a csv DB without doubles"""
-    # TODO
+    logging.info('csv_unique()')
+    with open(pickle_unique_path, 'rb') as f:
+        characters_map = pickle.load(f)
+    with open(original_csv_path, 'r', newline='', encoding='utf-8') as input_file:
+        reader = csv.reader(input_file, delimiter=',')
+        with open(output_path, 'w', newline='', encoding='utf-8') as output:
+            writer = csv.writer(output)
+            start = 1
+            for row in reader:
+                if start == 1:
+                    writer.writerow(row)
+                    start = 0
+                    continue
+                if row[0] in characters_map and \
+                                characters_map[row[0]]['region'] == row[3] and \
+                                characters_map[row[0]]['locale'] == row[4] and \
+                                characters_map[row[0]]['class'] == int(row[5]) and \
+                                characters_map[row[0]]['level'] == int(row[6]):
+                    writer.writerow(row)
     return
 
 
@@ -618,7 +636,6 @@ def pickle_union(pickle_1, pickle_2, output_path):
 ###############################################
 # STATS
 ##############
-# TODO separe functions in RETRIEVE/GENERATE and GET :
 #   the former scan the DB and create a file with the interested data, the latter just scan that file
 ##############
 
@@ -1242,8 +1259,7 @@ def avg_leveling_playtime(region, locale):
 # FREQUENT ITEMSET
 ##############
 # character field: "items"
-# TODO
-# next: mounts, pets, petSlots
+# applicable also to: mounts, pets, petSlots
 # GRANULARITY per region, level
 ##############
 
@@ -1419,6 +1435,39 @@ def apriori_offline_frequent_itemsets_class_level_total(itemsets_base_path, outp
     return
 
 
+def apriori_frequent_itemsets_folder(itemsets_base_path, output_base_path,
+                                     thresholds=[1, 0.75, 0.5, 0.25, 0.15, 0.1, 0.05, 0.01, 0.005, 0.002, 0.001]):
+    """ Returns the frequent itemsets of all the itemsets contained in input folder for all the give thresholds"""
+    logging.debug('apriori_frequent_itemsets_folder()')
+
+    for root, subFolders, files in os.walk(itemsets_base_path):
+        for file in files:
+            if not file.endswith('.dat'):
+                continue
+            with open(os.path.join(root, file), 'r') as input_file:
+                for threshold in thresholds:
+                    # A-PRIORI
+                    print('#######################################')
+                    output_file = 'frequent_' + file[:-4] + '[threshold_' + str(threshold) + '].dat'
+                    output_path = os.path.join(output_base_path, output_file)
+                    if os.path.exists(output_path):
+                        continue
+                    logging.debug(file + ' ' + str(threshold))
+                    tstamp = time.time()
+                    print('threshold:' + str(threshold))
+                    res_apriori = my_apriori.a_priori(input_file, output_path, threshold)
+                    freq_item_count = 0
+                    for i in res_apriori:
+                        freq_item_count += len(i)
+                    print('#######################################')
+                    print('Total frequent itemsets:' + str(freq_item_count))
+                    print('Total A-priori time:' + str(time.time() - tstamp))
+                    print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n')
+                    print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
+                    input_file.seek(0)
+    return
+
+
 ###############################################
 logging.info('START analyzer')
 
@@ -1441,14 +1490,15 @@ def main():
     #                'serialized_character_map_numpy_unique')
     # for c in range(1, 13):
     #     print(str(c))
-    #     pickle_intersection(os.path.join('Results', 'DBs', 'serialized_character_map_numpy_unique_c' + str(c) + '.pickle'),
-    #                         os.path.join('Results', 'DBs', 'serialized_character_map_numpy_unique_lv100.pickle'),
-    #                         os.path.join('Results', 'DBs',
-    #                                   'serialized_character_map_numpy_unique_c' + str(c) + '_lv100.pickle'))
-    pickle_union(os.path.join('Results', 'DBs', 'serialized_character_map_numpy_unique_c8_lv100.pickle'),
-                 os.path.join('Results', 'DBs', 'serialized_character_map_numpy_unique_c10_lv100.pickle'),
-                 os.path.join('Results', 'DBs',
-                              'serialized_character_map_numpy_unique_c8-10_lv100.pickle'))
+    #     pickle_intersection(
+    #         os.path.join('Results', 'DBs', 'serialized_character_map_numpy_unique_c' + str(c) + '.pickle'),
+    #         os.path.join('Results', 'DBs', 'serialized_character_map_numpy_unique_lv110.pickle'),
+    #         os.path.join('Results', 'DBs',
+    #                      'serialized_character_map_numpy_unique_c' + str(c) + '_lv110.pickle'))
+    # pickle_union(os.path.join('Results', 'DBs', 'serialized_character_map_numpy_unique_c8_lv100.pickle'),
+    #              os.path.join('Results', 'DBs', 'serialized_character_map_numpy_unique_c10_lv100.pickle'),
+    #              os.path.join('Results', 'DBs',
+    #                           'serialized_character_map_numpy_unique_c8-10_lv100.pickle'))
     #### SIMPLE ANALYTICAL STUFF
     print('===SIMPLE ANALYSIS')
 
@@ -1559,6 +1609,10 @@ def main():
     #                                                                      'tests'),
     #                                                         threshold,
     #                                                         classes)
+
+    item_folder = os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'itemsets_unique')
+    frequent_folder = os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'frequents_unique')
+    apriori_frequent_itemsets_folder(item_folder, frequent_folder)
 
     #### SIMILARITY
     print('===SIMILARITY')
