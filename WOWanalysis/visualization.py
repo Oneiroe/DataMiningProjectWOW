@@ -31,8 +31,7 @@ import subprocess
 
 def __r_plot(r_script_path, inputs, output_path):
     """ Launch externally a R plotting script """
-    command = ['C:\\Program Files\\R\\R-3.4.1\\bin\\Rscript.exe', r_script_path]
-    # command = ['Rscript', '"' + r_script_path + '"']
+    command = ['Rscript', r_script_path]
     for i in inputs:
         command += [i]
     command += [output_path]
@@ -52,14 +51,12 @@ def __max_itemsets_number(unique_items, max_basket_length):
     logging.debug('__max_itemsets_number')
     res = []
     f = math.factorial
-    with tqdm(total=max_basket_length) as pbar:
-        for i in range(1, max_basket_length + 1):
-            pbar.update(1)
-            # res += [len(list(itertools.combinations(unique_items, i)))]
-            if unique_items >= i:
-                res += [f(unique_items) // f(i) // f(unique_items - i)]
-            else:
-                res += [0]
+    for i in range(1, max_basket_length + 1):
+        # res += [len(list(itertools.combinations(unique_items, i)))]
+        if unique_items >= i:
+            res += [f(unique_items) // f(i) // f(unique_items - i)]
+        else:
+            res += [0]
     return res
 
 
@@ -72,19 +69,17 @@ def __itemsets_data_row_for_object(dat_itemsets_path):
     baskets_len_distribution = []  # how many basket for each length
     with open(dat_itemsets_path, 'r') as input_file:
         reader = csv.reader(input_file, delimiter=' ')
-        with tqdm() as pbar:
-            for row in reader:
-                pbar.update(1)
-                if len(row) == 0:
-                    continue
-                num_itemsets += 1
-                if row[-1] == '':
-                    row = row[:-1]
-                for item in row:
-                    tot_distinct_items.add(item)
-                if len(row) > max_basket_length:
-                    max_basket_length = len(row)
-                baskets_len_distribution += [len(row)]
+        for row in reader:
+            if len(row) == 0:
+                continue
+            num_itemsets += 1
+            if row[-1] == '':
+                row = row[:-1]
+            for item in row:
+                tot_distinct_items.add(item)
+            if len(row) > max_basket_length:
+                max_basket_length = len(row)
+            baskets_len_distribution += [len(row)]
         baskets_len_distribution = Counter(baskets_len_distribution)
     # MAX combinations
     max_comb = __max_itemsets_number(len(tot_distinct_items), max_basket_length)
@@ -101,18 +96,15 @@ def __frequent_itemsets_data_row_for_object(dat_frequent_itemsets_path, max_bask
     threshold = float(os.path.basename(dat_frequent_itemsets_path).split('[threshold_')[1][:-5])
     with open(dat_frequent_itemsets_path, 'r') as input_file:
         reader = csv.reader(input_file, delimiter=' ')
-        with tqdm() as pbar:
-            for row in reader:
-                pbar.update(1)
-                if len(row) == 0:
-                    continue
-                if row[-1] == '':
-                    row = row[:-1]
-                for item in row:
-                    freq_distinct_items.add(item)
-                    frequent_distinct_items_per_length[len(row) - 1].add(item)
-
-                frequent_itemsets_len_distribution += [len(row)]
+        for row in reader:
+            if len(row) == 0:
+                continue
+            if row[-1] == '':
+                row = row[:-1]
+            for item in row:
+                freq_distinct_items.add(item)
+                frequent_distinct_items_per_length[len(row) - 1].add(item)
+            frequent_itemsets_len_distribution += [len(row)]
         frequent_itemsets_len_distribution = Counter(frequent_itemsets_len_distribution)
     max_freq_comb = __max_itemsets_number(len(freq_distinct_items), max_basket_length)
     return [freq_distinct_items, frequent_itemsets_len_distribution, frequent_distinct_items_per_length, threshold,
@@ -188,6 +180,14 @@ def plot_itemsets_stacked_area(itemset_data_plot_csv_path, output_path):
     return
 
 
+def plot_treemap_area(itemset_data_plot_csv_path, output_path):
+    """ Launch an R script to plot the treemap graph for the give itemsets category """
+    r_script_path = os.path.join(os.getcwd(), 'WOWanalysis', 'Rscripts', 'itemsets_treemap.r')
+    inputs = [itemset_data_plot_csv_path]
+    __r_plot(r_script_path, inputs, output_path)
+    return
+
+
 ###############################################
 # SIMILARITY
 ##############
@@ -242,25 +242,48 @@ def main():
 
     # os.chdir(os.path.join(os.getcwd(), 'Results', 'test', 'plotly'))
 
-    preprocess_itemsets_data(
-        'itemsets_unique_c3',
-        os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'itemsets_unique'),
-        os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'frequents_unique'),
-        os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'graphs')
-    )
+    # preprocess_itemsets_data(
+    #     'itemsets_unique_c3',
+    #     os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'itemsets_unique'),
+    #     os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'frequents_unique'),
+    #     os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'graphs')
+    # )
 
-    # for f in os.listdir(os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'itemsets_unique')):
-    #     if f.endswith('.dat'):
-    #         preprocess_itemsets_data(
-    #             f.replace('.dat', ''),
-    #             os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'itemsets_unique'),
-    #             os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'frequents_unique'),
-    #             os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'graphs')
-    #         )
+    # preprocess itemsets
+    # with tqdm(total=len(
+    #         os.listdir(os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'itemsets_unique')))) as pbar:
+    #     for f in os.listdir(os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'itemsets_unique')):
+    #         pbar.update(1)
+    #         if f.endswith('.dat'):
+    #             preprocess_itemsets_data(
+    #                 f.replace('.dat', ''),
+    #                 os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'itemsets_unique'),
+    #                 os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'frequents_unique'),
+    #                 os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'graphs')
+    #             )
 
+    # plot all preprocessed itemsets
+
+    print("stacked area")
     plot_itemsets_stacked_area(
-        os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'graphs', 'itemsets_unique_c3.csv'),
+        os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'graphs', 'itemsets_unique_c4.csv'),
         os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'graphs'))
+
+    # print("treemap")
+    # plot_treemap_area(
+    #     os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'graphs', 'itemsets_unique_c1.csv'),
+    #     os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'graphs'))
+
+    # with tqdm(total=len(os.listdir(os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'graphs')))) as pbar:
+    #     for f in os.listdir(os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'graphs')):
+    #         pbar.update(1)
+    #         if f.endswith('.csv'):
+    #             plot_itemsets_stacked_area(
+    #                 os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'graphs', f),
+    #                 os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'graphs'))
+    #             plot_treemap_area(
+    #                 os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'graphs', f),
+    #                 os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'graphs'))
 
 
 if __name__ == "__main__":

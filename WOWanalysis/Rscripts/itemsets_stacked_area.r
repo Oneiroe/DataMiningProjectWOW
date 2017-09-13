@@ -9,93 +9,104 @@ itemsets_stacked_area <-
     
     # data transformation
     tdp <- as_tibble(data_plot)
-    
     # plotting stacked-area-graph
     
-    thresholds_num <- 11
-    baskets_num <- 18
+    # number of rows
+    thresholds_num <- dim(tdp)[1]
+    # number of frequent_itemsets_X fields
+    baskets_num <- length(tdp[grep("frequent_itemsets_", names(tdp))])
     
-    Areas <-
-      rep(
-        c(
-          "S01",
-          "S02",
-          "S03",
-          "S04",
-          "S05",
-          "S06",
-          "S07",
-          "S08",
-          "S09",
-          "S10",
-          "S11",
-          "S12",
-          "S13",
-          "S14",
-          "S15",
-          "S16",
-          "S17",
-          "S18"
-        ),
-        times = thresholds_num
-      )
+    itemset_length <- sprintf("L%02d", seq(1,baskets_num))
+    itemset_length <- rep(itemset_length, times = thresholds_num)
     
-    X <- 0
+    threshold <- 0
     for (i in tdp["threshold"]) {
       for (j in i) {
-        # X <- c(X,(rep(as.character(j), times=baskets_num)))
-        X <- c(X, (rep(j, times = baskets_num)))
+        threshold <- c(threshold, (rep(as.character(j), times = baskets_num)))
+        # X <- c(X, (rep(j, times = baskets_num)))
       }
     }
-    X <- X[-1]
+    threshold <- threshold[-1]
     
-    Y <- 0
+    frequent_itemsets_number <- 0
     for (i in 1:thresholds_num) {
-      Y <- c(Y, as.numeric(tdp[i, 24:(24 + 18 - 1)]))
+      first_index <- grep("^frequent_itemsets_1$", colnames(tdp))
+      last_index <-
+        grep("^frequent_itemsets_1$", colnames(tdp)) + baskets_num - 1
+      frequent_itemsets_number <- c(frequent_itemsets_number, as.numeric(tdp[i, first_index:last_index]))
     }
-    Y <- Y[-1]
+    frequent_itemsets_number <- frequent_itemsets_number[-1]
     
-    my_data <- data.frame(Areas, X, Y)
+    my_data <- data.frame(itemset_length, threshold, frequent_itemsets_number)
     
-    # OUTPUT
-    output_file <-
+    # OUTPUT settings
+    o_width = 1920
+    o_height = 1080
+    base_output_file <-
       file.path(
         output_base_path,
-        paste0(tools::file_path_sans_ext(basename(data_plot_path)), "_stacked_area.png"),
+        paste0(tools::file_path_sans_ext(basename(data_plot_path)), "_stacked_area"),
         fsep = '\\'
       )
     
-    png(filename = output_file,
-        width = 1920,
-        height = 1080)
+    ## OUTPUT Default graph 
+    output_file <-
+      paste0(base_output_file,".png")
     
-    ## Default graph
+    png(filename = output_file,
+        width = o_width,
+        height = o_height)
+    
     print(ggplot(my_data, aes(
-      x = X,
-      y = Y,
-      group = Areas,
-      fill = Areas
+      x = threshold,
+      y = frequent_itemsets_number,
+      group = itemset_length,
+      fill = itemset_length
     )) + geom_area())
     
-    ## Y scaled as logaritm to avoid picks
-    # print(ggplot(my_data, aes(
-    #   x = X,
-    #   y = log1p(Y),
-    #   group = Areas,
-    #   fill = Areas
-    # )) + geom_area())
+    dev.off()
     
+    ## OUTPUT Y scaled as logaritm to avoid picks
+    output_file <-
+      paste0(base_output_file,"[log].png")
     
-    ## filled
-    # print(ggplot(my_data, aes(
-    #   x = X,
-    #   y = Y,
-    #   group = Areas,
-    #   fill = Areas
-    # )) + geom_area(position = "fill"))
+    png(filename = output_file,
+        width = o_width,
+        height = o_height)
     
+    print(ggplot(my_data, aes(
+      x = threshold,
+      y = log1p(frequent_itemsets_number),
+      group = itemset_length,
+      fill = itemset_length
+    )) + geom_area())
     
-    ## axis X transform (TO-FIX)
+    dev.off()
+    
+    ## OUTPUT filled
+    output_file <-
+      paste0(base_output_file,"[filled].png")
+    
+    png(filename = output_file,
+        width = o_width,
+        height = o_height)
+    
+    print(ggplot(my_data, aes(
+      x = threshold,
+      y = frequent_itemsets_number,
+      group = itemset_length,
+      fill = itemset_length
+    )) + geom_area(position = "fill"))
+    
+    dev.off()
+    
+    ## OUTPUT axis X transform (TO-FIX)
+    # output_file <-
+    #   paste0(base_output_file,"[x_scaled].png")
+    # 
+    # png(filename = output_file,
+    #     width = o_width,
+    #     height = o_height)
     # one_over = function()
     #   trans_new("one_over", function(x)
     #     nthroot(x, 10), function(x)
@@ -103,11 +114,11 @@ itemsets_stacked_area <-
     # print(ggplot(my_data, aes(
     #   x = X,
     #   y = log1p(Y),
-    #   group = Areas,
-    #   fill = Areas
+    #   group = itemset_length,
+    #   fill = itemset_length
     # )) + geom_area() + coord_trans(x="one_over"))
+    # dev.off()
     
-    dev.off()
     return()
   }
 
@@ -115,3 +126,5 @@ args = commandArgs(trailingOnly = TRUE)
 if (length(args) == 2) {
   itemsets_stacked_area(args[1], args[2])
 }
+
+
