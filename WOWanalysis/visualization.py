@@ -217,6 +217,25 @@ def show_distance_matrix_from_file_mpl(csv_path):
     # mpl.savefig('test.png')
 
 
+##############
+# R
+
+def plot_similarity_heatmap(distance_matrix_csv_path, output_path):
+    """ Launch an R script to plot the heatmap for the give distance matrix """
+    r_script_path = os.path.join(os.getcwd(), 'WOWanalysis', 'Rscripts', 'similarity_heatmap.r')
+    inputs = [distance_matrix_csv_path]
+    __r_plot(r_script_path, inputs, output_path)
+    return
+
+
+def plot_similarity_dendogram_heatmap(distance_matrix_csv_path, output_path):
+    """ Launch an R script to plot the the heatmap for the give distance matrix reordering according hierarchies """
+    r_script_path = os.path.join(os.getcwd(), 'WOWanalysis', 'Rscripts', 'similarity_dendogram_heatmap.r')
+    inputs = [distance_matrix_csv_path]
+    __r_plot(r_script_path, inputs, output_path)
+    return
+
+
 ###############################################
 # TEST-MAIN
 ##############
@@ -239,6 +258,10 @@ def main():
         'US': ['en_US', 'pt_BR', 'es_MX']
     }
     stats_max_dist_global = 5990271.526328605
+
+    ###############################################
+    # ITEMSETS
+    ##############
 
     # os.chdir(os.path.join(os.getcwd(), 'Results', 'test', 'plotly'))
 
@@ -264,26 +287,52 @@ def main():
 
     # plot all preprocessed itemsets
 
-    print("stacked area")
-    plot_itemsets_stacked_area(
-        os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'graphs', 'itemsets_unique_c4.csv'),
-        os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'graphs'))
+    # print("stacked area")
+    # plot_itemsets_stacked_area(
+    #     os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'graphs', 'itemsets_unique_c4.csv'),
+    #     os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'graphs'))
 
     # print("treemap")
     # plot_treemap_area(
-    #     os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'graphs', 'itemsets_unique_c1.csv'),
+    #     os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'graphs', 'itemsets_unique_c4.csv'),
     #     os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'graphs'))
 
     # with tqdm(total=len(os.listdir(os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'graphs')))) as pbar:
     #     for f in os.listdir(os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'graphs')):
     #         pbar.update(1)
     #         if f.endswith('.csv'):
+    #             logging.info(f)
     #             plot_itemsets_stacked_area(
     #                 os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'graphs', f),
     #                 os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'graphs'))
     #             plot_treemap_area(
     #                 os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'graphs', f),
     #                 os.path.join(os.getcwd(), 'Results', 'frequent_itemsets', 'graphs'))
+
+    ###############################################
+    # SIMILARITY
+    ##############
+
+    # print('heatmap')
+    # plot_similarity_heatmap(
+    #     os.path.join(os.getcwd(), 'Results', 'similarity', 'sorted_matrix_unique_c12_lv100[appearance].csv'),
+    #     os.path.join(os.getcwd(), 'Results', 'similarity', 'graphs'))
+    # print('dendogram')
+    # plot_similarity_dendogram_heatmap(
+    #     os.path.join(os.getcwd(), 'Results', 'similarity', 'sorted_matrix_unique_c12_lv100[appearance].csv'),
+    #     os.path.join(os.getcwd(), 'Results', 'similarity', 'graphs'))
+
+    with tqdm(total=len(os.listdir(os.path.join(os.getcwd(), 'Results', 'similarity')))) as pbar:
+        for f in os.listdir(os.path.join(os.getcwd(), 'Results', 'similarity')):
+            pbar.update(1)
+            if f.endswith('.csv'):
+                logging.info(f)
+                plot_similarity_heatmap(
+                    os.path.join(os.getcwd(), 'Results', 'similarity', f),
+                    os.path.join(os.getcwd(), 'Results', 'similarity', 'graphs'))
+                plot_similarity_dendogram_heatmap(
+                    os.path.join(os.getcwd(), 'Results', 'similarity', f),
+                    os.path.join(os.getcwd(), 'Results', 'similarity', 'graphs'))
 
 
 if __name__ == "__main__":
