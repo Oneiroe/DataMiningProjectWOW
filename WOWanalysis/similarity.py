@@ -691,7 +691,7 @@ def distance_matrix_multi(characters_list, distance_function, output_path):
 ##############
 # Multi Post-Processing
 
-def sort_distance_matrix(original_csv_path, output_path):
+def sort_distance_matrix(original_csv_path, characters_list, output_path):
     """ Sort in the right order the multi processing result"""
     logging.info('sort_distance_matrix()')
     app_indices = {}
@@ -706,6 +706,10 @@ def sort_distance_matrix(original_csv_path, output_path):
         # Pass-2 write
         input_file.seek(0)
         with open(output_path, 'w', newline='', encoding='utf-8') as output_file:
+            # make header with characters names
+            header_writer = csv.writer(output_file)
+            header_writer.writerow(x['file'] for x in characters_list)
+
             with tqdm(total=characters_num) as pbar:
                 l = input_file.readlines()
                 for i in range(characters_num):
@@ -713,6 +717,52 @@ def sort_distance_matrix(original_csv_path, output_path):
                     index = app_indices[i]
                     output_file.write(l[index])
 
+    return
+
+
+##############
+# Launcher
+
+def distance_matrices_set(pickle_path, distances, output_base_path, override=False):
+    """ Compute distance matrices for the given DB in all the distance measures proposed.
+     Override value state if a file should be override if already existing"""
+    logging.info('distance_matrices_set(' + str(os.path.basename(pickle_path)) + ')')
+
+    # input pickle
+    with open(pickle_path, 'rb') as f:
+        characters_map = pickle.load(f)
+    characters_list = list(characters_map.values())
+    characters_list.sort(key=lambda k: (k['class'], k['level']))
+    del characters_map
+
+    for d_function, str_dist in distances:
+        logging.info(str_dist)
+        print(str_dist)
+
+        temp_output_file_name = 'matrix_' + \
+                                os.path.basename(pickle_path)[:-7].replace('serialized_character_map_numpy_', '') + \
+                                '[' + str_dist + ']' + \
+                                '.csv'
+        output_file_name = 'sorted_matrix_' + \
+                           os.path.basename(pickle_path)[:-7].replace('serialized_character_map_numpy_', '') + \
+                           '[' + str_dist + ']' + \
+                           '.csv'
+        temp_path = os.path.join(output_base_path, temp_output_file_name)
+        output_path = os.path.join(output_base_path, output_file_name)
+        # check if already existing
+        if not override and os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+            continue
+
+        # create triangular distance matrix in multi process
+        distance_matrix_multi(characters_list, d_function, temp_path)
+
+        # sort triangular distance matrix
+        sort_distance_matrix(temp_path, characters_list, output_path)
+
+        # remove unsorted matrix
+        os.remove(temp_path)
+
+    del characters_list
     return
 
 
@@ -739,21 +789,21 @@ def main():
     }
     stats_max_dist_global = 5990271.526328605
 
-    # with open(os.path.join(os.getcwd(), 'Results', 'serialized_character_map_numpy.pickle'), 'rb') as f:
-    locale = 'zh_TW'
-    c = '8-10'
-    lv = '100'
-    with open(os.path.join(os.getcwd(),
-                           'Results',
-                           'DBs',
-                           'serialized_character_map_numpy_unique_c' + c + '_lv' + lv + '.pickle'), 'rb') as f:
-        # 'serialized_character_map_numpy_unique_c' + c + '.pickle'), 'rb') as f:
-        # 'serialized_character_map_numpy_unique_' + locale + '.pickle'), 'rb') as f:
-        characters_map = pickle.load(f)
-    characters_list = list(characters_map.values())[:1000]
-    # characters_list = list(characters_map.values())
-    # characters_list.sort(key=lambda k: (k['class'], k['level']))
-    del characters_map  # space saving
+    # # with open(os.path.join(os.getcwd(), 'Results', 'serialized_character_map_numpy.pickle'), 'rb') as f:
+    # locale = 'zh_TW'
+    # c = '8-10'
+    # lv = '100'
+    # with open(os.path.join(os.getcwd(),
+    #                        'Results',
+    #                        'DBs',
+    #                        'serialized_character_map_numpy_unique_c' + c + '_lv' + lv + '.pickle'), 'rb') as f:
+    #     # 'serialized_character_map_numpy_unique_c' + c + '.pickle'), 'rb') as f:
+    #     # 'serialized_character_map_numpy_unique_' + locale + '.pickle'), 'rb') as f:
+    #     characters_map = pickle.load(f)
+    # characters_list = list(characters_map.values())[:1000]
+    # # characters_list = list(characters_map.values())
+    # # characters_list.sort(key=lambda k: (k['class'], k['level']))
+    # del characters_map  # space saving
 
     tstamp = time.time()
     # # distance_matrix_sequential(characters_list, distance_general_from_map, 'test_matrix.csv')
@@ -767,30 +817,79 @@ def main():
         (distance_stats_from_map, 'stats'),
         (distance_talents_from_map, 'talents')
     ]
-    for d_function, str_dist in distances:
-        print(str_dist)
-        distance_matrix_multi(characters_list,
-                              d_function,
-                              os.path.join(os.getcwd(),
-                                           'Results',
-                                           'similarity',
-                                           'matrix_c' + c + '_lv' + lv + '[' + str_dist + ']' + '.csv'))
-        # 'matrix_c' + c + '[' + str_dist + ']' + '.csv'))
-        # 'matrix_c' + locale + '[' + str_dist + ']' + '.csv'))
-        # del characters_list
 
-        sort_distance_matrix(os.path.join(os.getcwd(),
-                                          'Results',
-                                          'similarity',
-                                          'matrix_c' + c + '_lv' + lv + '[' + str_dist + ']' + '.csv'),
-                             # 'matrix_c' + c + '[' + str_dist + ']' + '.csv'),
-                             # 'matrix_c' + locale + '[' + str_dist + ']' + '.csv'),
-                             os.path.join(os.getcwd(),
-                                          'Results',
-                                          'similarity',
-                                          'sorted_matrix_c' + c + '_lv' + lv + '[' + str_dist + ']' + '.csv'))
-        # 'sorted_matrix_c' + c + '[' + str_dist + ']' + '.csv'))
-        # 'sorted_matrix_c' + locale + '[' + str_dist + ']' + '.csv'))
+    # distance_matrices_set(
+    #     os.path.join(os.getcwd(), 'Results', 'DBs', 'serialized_character_map_numpy_global.pickle'),
+    #     distances,
+    #     os.path.join(os.getcwd(), 'Results', 'similarity')
+    # )
+    #
+    # distance_matrices_set(
+    #     os.path.join(os.getcwd(), 'Results', 'DBs', 'serialized_character_map_numpy_global_unique.pickle'),
+    #     distances,
+    #     os.path.join(os.getcwd(), 'Results', 'similarity')
+    # )
+    #
+    # for region in locations:
+    #     distance_matrices_set(
+    #         os.path.join(os.getcwd(), 'Results', 'DBs', 'serialized_character_map_numpy_unique_' + region + '.pickle'),
+    #         distances,
+    #         os.path.join(os.getcwd(), 'Results', 'similarity')
+    #     )
+
+    # for lv in ['90', '100', '110']:
+    #     distance_matrices_set(
+    #         os.path.join(os.getcwd(), 'Results', 'DBs', 'serialized_character_map_numpy_unique_lv' + lv + '.pickle'),
+    #         distances,
+    #         os.path.join(os.getcwd(), 'Results', 'similarity')
+    #     )
+
+    for c in range(1, 13):
+        distance_matrices_set(
+            os.path.join(os.getcwd(), 'Results', 'DBs', 'serialized_character_map_numpy_unique_c' + str(c) + '.pickle'),
+            distances,
+            os.path.join(os.getcwd(), 'Results', 'similarity')
+        )
+        for lv in ['90', '100', '110']:
+            distance_matrices_set(
+                os.path.join(os.getcwd(), 'Results', 'DBs',
+                             'serialized_character_map_numpy_unique_c' + str(c) + '_lv' + lv + '.pickle'),
+                distances,
+                os.path.join(os.getcwd(), 'Results', 'similarity')
+            )
+
+    # for d_function, str_dist in distances:
+    #     print(str_dist)
+    #     # create triangular distance matrix in multi process
+    #     distance_matrix_multi(characters_list,
+    #                           d_function,
+    #                           os.path.join(os.getcwd(),
+    #                                        'Results',
+    #                                        'similarity',
+    #                                        'matrix_c' + c + '_lv' + lv + '[' + str_dist + ']' + '.csv'))
+    #     # 'matrix_c' + c + '[' + str_dist + ']' + '.csv'))
+    #     # 'matrix_c' + locale + '[' + str_dist + ']' + '.csv'))
+    #     # del characters_list
+    #
+    #     # sort triangular distance matrix
+    #     sort_distance_matrix(os.path.join(os.getcwd(),
+    #                                       'Results',
+    #                                       'similarity',
+    #                                       'matrix_c' + c + '_lv' + lv + '[' + str_dist + ']' + '.csv'),
+    #                          # 'matrix_c' + c + '[' + str_dist + ']' + '.csv'),
+    #                          # 'matrix_c' + locale + '[' + str_dist + ']' + '.csv'),
+    #                          os.path.join(os.getcwd(),
+    #                                       'Results',
+    #                                       'similarity',
+    #                                       'sorted_matrix_c' + c + '_lv' + lv + '[' + str_dist + ']' + '.csv'))
+    #     # 'sorted_matrix_c' + c + '[' + str_dist + ']' + '.csv'))
+    #     # 'sorted_matrix_c' + locale + '[' + str_dist + ']' + '.csv'))
+    #
+    #     # remove unsorted matrix
+    #     os.remove(os.path.join(os.getcwd(),
+    #                            'Results',
+    #                            'similarity',
+    #                            'matrix_c' + c + '_lv' + lv + '[' + str_dist + ']' + '.csv'))
 
     # wolfram alpha folmula for expectation, where sec=avg second to complete a full row
     #     sum (n/(235888/x)), 1<=n<=235888,x=20
