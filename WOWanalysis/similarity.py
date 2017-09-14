@@ -17,6 +17,7 @@ import multiprocessing
 from multiprocessing import Process, Pool, Value, Array, Lock, current_process
 import pandas
 import psutil
+import random
 
 
 ###############################################
@@ -619,7 +620,7 @@ def distance_talents_from_map(character_1_map, character_2_map):
 # SEQUENTIAL
 def distance_matrix_sequential(characters_list, distance_function, output_path):
     """ Write a file containing the distance matrix (triangle) """
-    logging.debug('distance_matrix_sequential()')
+    logging.info('distance_matrix_sequential()')
 
     characters_num = len(characters_list)
     with open(output_path, 'w', newline='', encoding='utf-8') as output_file:
@@ -641,10 +642,18 @@ def distance_matrix_sequential(characters_list, distance_function, output_path):
 
 def worker_row(i, characters_list, characters_num, distance_function, output_queue):
     row = [None] * i
+    # pause if less then 1GB of RAM
+    while int((psutil.virtual_memory().available / (1024 * 1024))) <= 1000:
+        # time.sleep(random.randint(1, 10))
+        time.sleep(1)
+        if random.random() <= 0.2:
+            # To avoid all process locked forever waiting for available RAM
+            break
+
     for j in range(i, characters_num):
         row += [distance_function(characters_list[i], characters_list[j])]
     output_queue.put(row)
-    return row
+    return
 
 
 def output_writer_listener(output_path, output_queue, characters_num):
@@ -667,8 +676,8 @@ def distance_matrix_multi(characters_list, distance_function, output_path):
     manager = multiprocessing.Manager()
     output_queue = manager.Queue()
     # with Pool(multiprocessing.cpu_count()) as p:
-    logging.info('Available Memory (Mb): ' + str(psutil.virtual_memory().available / (1024 * 1024)))
-    logging.info('Process Size (Mb): ' + str(psutil.Process(os.getpid()).memory_info().rss / float(2 ** 20)))
+    logging.debug('Available Memory (Mb): ' + str(psutil.virtual_memory().available / (1024 * 1024)))
+    logging.debug('Process Size (Mb): ' + str(psutil.Process(os.getpid()).memory_info().rss / float(2 ** 20)))
     logging.info('#Process fitting in memory: ' + str(int((psutil.virtual_memory().available / (1024 * 1024)) / (
         psutil.Process(os.getpid()).memory_info().rss / float(2 ** 20))) + 1))
     process_number = min(multiprocessing.cpu_count(),
@@ -728,6 +737,8 @@ def distance_matrices_set(pickle_path, distances, output_base_path, override=Fal
      Override value state if a file should be override if already existing"""
     logging.info('distance_matrices_set(' + str(os.path.basename(pickle_path)) + ')')
 
+    print('#####################################################')
+    print(os.path.basename(pickle_path))
     # input pickle
     with open(pickle_path, 'rb') as f:
         characters_map = pickle.load(f)
@@ -736,7 +747,6 @@ def distance_matrices_set(pickle_path, distances, output_base_path, override=Fal
     del characters_map
 
     for d_function, str_dist in distances:
-        logging.info(str_dist)
         print(str_dist)
 
         temp_output_file_name = 'matrix_' + \
@@ -830,12 +840,14 @@ def main():
     #     os.path.join(os.getcwd(), 'Results', 'similarity')
     # )
     #
-    # for region in locations:
-    #     distance_matrices_set(
-    #         os.path.join(os.getcwd(), 'Results', 'DBs', 'serialized_character_map_numpy_unique_' + region + '.pickle'),
-    #         distances,
-    #         os.path.join(os.getcwd(), 'Results', 'similarity')
-    #     )
+
+    for region in ['TW']:
+        # for region in locations:
+        distance_matrices_set(
+            os.path.join(os.getcwd(), 'Results', 'DBs', 'serialized_character_map_numpy_unique_' + region + '.pickle'),
+            distances,
+            os.path.join(os.getcwd(), 'Results', 'similarity')
+        )
 
     # for lv in ['90', '100', '110']:
     #     distance_matrices_set(
@@ -844,19 +856,19 @@ def main():
     #         os.path.join(os.getcwd(), 'Results', 'similarity')
     #     )
 
-    for c in range(1, 13):
-        distance_matrices_set(
-            os.path.join(os.getcwd(), 'Results', 'DBs', 'serialized_character_map_numpy_unique_c' + str(c) + '.pickle'),
-            distances,
-            os.path.join(os.getcwd(), 'Results', 'similarity')
-        )
-        for lv in ['90', '100', '110']:
-            distance_matrices_set(
-                os.path.join(os.getcwd(), 'Results', 'DBs',
-                             'serialized_character_map_numpy_unique_c' + str(c) + '_lv' + lv + '.pickle'),
-                distances,
-                os.path.join(os.getcwd(), 'Results', 'similarity')
-            )
+    # for c in range(1, 13):
+    #     distance_matrices_set(
+    #         os.path.join(os.getcwd(), 'Results', 'DBs', 'serialized_character_map_numpy_unique_c' + str(c) + '.pickle'),
+    #         distances,
+    #         os.path.join(os.getcwd(), 'Results', 'similarity')
+    #     )
+    #     for lv in ['90', '100', '110']:
+    #         distance_matrices_set(
+    #             os.path.join(os.getcwd(), 'Results', 'DBs',
+    #                          'serialized_character_map_numpy_unique_c' + str(c) + '_lv' + lv + '.pickle'),
+    #             distances,
+    #             os.path.join(os.getcwd(), 'Results', 'similarity')
+    #         )
 
     # for d_function, str_dist in distances:
     #     print(str_dist)
