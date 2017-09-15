@@ -8,6 +8,7 @@ import sys
 import os
 import numpy as np
 import matplotlib.pyplot as mpl
+import matplotlib
 import pandas
 import logging
 from tqdm import tqdm
@@ -204,17 +205,28 @@ def show_distance_matrix_mpl(characters_iterator, distance_function):
     mpl.show()
 
 
-def show_distance_matrix_from_file_mpl(csv_path):
+def show_distance_matrix_from_file_mpl(csv_path, output_base_path):
     """ import a distance matrix from CSV and show it trough matPlotLib."""
     logging.info('show_distance_matrix_from_file_mpl')
+
+    ext = 'png'
+    output_file = os.path.join(output_base_path,
+                               os.path.basename(csv_path)[:-4] + '_heatmap_mpl.' + ext)
+    if os.path.exists(output_file):
+        return
+
     d = pandas.read_csv(csv_path)
     logging.info('loaded numpy matrix from csv')
     # mpl.matshow(d.reshape(len(characters_iterator), len(characters_iterator)), cmap="Reds")
-    mpl.matshow(d, cmap="Reds")
+    mpl.matshow(d, cmap="YlOrRd_r")  # light yellow to red
+    # mpl.matshow(d, cmap="seismic_r") # scale of blue for >0.5, scale of red for <0.5, with in middle
     logging.info('created matplotlib object')
     mpl.colorbar()
-    mpl.show()
-    # mpl.savefig('test.png')
+    # mpl.show()
+    mpl.savefig(output_file,
+                figsize=(20, 20),
+                dpi=300)
+    mpl.close()
 
 
 ##############
@@ -322,17 +334,35 @@ def main():
     #     os.path.join(os.getcwd(), 'Results', 'similarity', 'sorted_matrix_unique_c12_lv100[appearance].csv'),
     #     os.path.join(os.getcwd(), 'Results', 'similarity', 'graphs'))
 
-    with tqdm(total=len(os.listdir(os.path.join(os.getcwd(), 'Results', 'similarity')))) as pbar:
-        for f in os.listdir(os.path.join(os.getcwd(), 'Results', 'similarity')):
-            pbar.update(1)
-            if f.endswith('.csv'):
-                logging.info(f)
-                plot_similarity_heatmap(
-                    os.path.join(os.getcwd(), 'Results', 'similarity', f),
-                    os.path.join(os.getcwd(), 'Results', 'similarity', 'graphs'))
-                plot_similarity_dendogram_heatmap(
-                    os.path.join(os.getcwd(), 'Results', 'similarity', f),
-                    os.path.join(os.getcwd(), 'Results', 'similarity', 'graphs'))
+    # with tqdm(total=len(os.listdir(os.path.join(os.getcwd(), 'Results', 'similarity')))) as pbar:
+    #     for f in os.listdir(os.path.join(os.getcwd(), 'Results', 'similarity')):
+    #         pbar.update(1)
+    #         if f.endswith('.csv'):
+    #             logging.info(f)
+    #             plot_similarity_heatmap(
+    #                 os.path.join(os.getcwd(), 'Results', 'similarity', f),
+    #                 os.path.join(os.getcwd(), 'Results', 'similarity', 'graphs'))
+    #             plot_similarity_dendogram_heatmap(
+    #                 os.path.join(os.getcwd(), 'Results', 'similarity', f),
+    #                 os.path.join(os.getcwd(), 'Results', 'similarity', 'graphs'))
+    with tqdm(total=1 * 8) as pbar:
+        # for i in range(1, 13):
+        for i in ['TW']:
+            for dist in [
+                'general',
+                'appearance',
+                'items',
+                'mounts',
+                'pets',
+                'professions',
+                'stats',
+                'talents'
+            ]:
+                pbar.update(1)
+                show_distance_matrix_from_file_mpl(
+                    os.path.join('Results', 'similarity', 'sorted_matrix_unique_' + str(i) + '[' + dist + '].csv'),
+                    os.path.join('Results', 'similarity', 'graphs')
+                )
 
 
 if __name__ == "__main__":
