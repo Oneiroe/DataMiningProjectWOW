@@ -49,18 +49,54 @@ shinyServer(function(input, output) {
     } else{
       filename <- paste0(filename, "_stacked_area", i_type, ".png")
     }
-    print(filename)
+    
+    filepath <-
+      normalizePath(file.path('www//images//itemsets', filename))
+    # Return a list containing the filename
+    list(src = filepath,
+         width = 400,
+         height = 400
+         )
+  }, deleteFile = FALSE)
+  
+  ###########################################################
+  # ITEMSETS TREEMAP STATIC: SELECT IMAGE UNIQUE class/level/class&level/region and threshold
+  output$plot_treemap <- renderImage({
+    i_region <- input$regionItem
+    i_level <- input$levelItem
+    i_class <- input$classItem
+    i_threshold <- input$threshold
+    
+    filename <- 'itemsets_unique'
+    if (i_region == 'none') {
+      if (i_level == 'all' & i_class == '0') {
+        return()
+      }
+      if (i_class != '0') {
+        filename <- paste0(filename, '_c', i_class)
+      }
+      if (i_level != 'all') {
+        filename <- paste0(filename, '_lv', i_level)
+      }
+      
+    } else{
+      filename <- paste0('itemsets_unique_', i_region)
+    }
+    
+    filename <- paste0(filename, "_treemap[", i_threshold, "].png")
+    
     filepath <-
       normalizePath(file.path('www//images//itemsets', filename))
     # Return a list containing the filename
     list(src = filepath,
          width = 250,
-         height = 250)
+         height = 250
+         )
   }, deleteFile = FALSE)
   
   ###########################################################
-  # ITEMSETS TREEMAP: SELECT IMAGE UNIQUE class/level/class&level/region and threshold
-  output$plot_treemap <- renderImage({
+  # ITEMSETS TREEMAP D3: SELECT IMAGE UNIQUE class/level/class&level/region and threshold
+  output$plot_treemap_d3 <- renderUI({
     i_region <- input$regionItem
     i_level <- input$levelItem
     i_class <- input$classItem
@@ -82,15 +118,12 @@ shinyServer(function(input, output) {
       filename <- paste0('itemsets_unique_', i_region)
     }
     
-    filename <- paste0(filename, "_treemap[", i_threshold, "].png")
-    print(filename)
+    filename <- paste0(filename, "_treemap_interactive[", i_threshold, "].html")
+    
     filepath <-
       normalizePath(file.path('www//images//itemsets', filename))
     # Return a list containing the filename
-    list(src = filepath,
-         width = 250,
-         height = 250)
-  }, deleteFile = FALSE)
-  
+    list(includeHTML(filepath))
+  })
 
 })

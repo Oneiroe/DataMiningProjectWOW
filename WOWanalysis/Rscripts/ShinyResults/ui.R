@@ -148,18 +148,33 @@ shinyUI(
           ),
           mainPanel(imageOutput("plot_stacked_area"))
         ),
-
-      ##############################
-      # treemap
-      sidebarLayout(
-        sidebarPanel(
-          position = "right",
-          radioButtons("threshold",
-                       label = "Threshold (%):",
-                       choices = thresholds)
-        ),
-        mainPanel(imageOutput("plot_treemap"))
-      ))
+        
+        # ##############################
+        # # treemap static
+        # sidebarLayout(
+        #   sidebarPanel(
+        #     position = "right",
+        #     radioButtons("threshold",
+        #                  label = "Threshold (%):",
+        #                  choices = thresholds)
+        #   ),
+        #   mainPanel(imageOutput("plot_treemap"))
+        # )
+        
+        #############################
+        # treemap D3
+        sidebarLayout(
+          sidebarPanel(
+            position = "right",
+            radioButtons("threshold",
+                         label = "Threshold (%):",
+                         choices = thresholds)
+          ),
+          mainPanel(
+            uiOutput("plot_treemap_d3")
+          )
+        )
+      )
     ),
     
     
