@@ -64,8 +64,7 @@ h2("Stats"),
 tabsetPanel(
   tabPanel("unique",
            sidebarLayout(
-             sidebarPanel(
-             ),
+             sidebarPanel(p("EXPLANATION TEXT HERE")),
              mainPanel(
                h3("Gender"),
                img(src = "images//stats//unique_genders.png"),
@@ -78,14 +77,19 @@ tabsetPanel(
                h3("Levels"),
                img(src = "images//stats//unique_levels_line.png"),
                # br(),
-               img(src = "images//stats//unique_levels_bubble.png")
+               img(src = "images//stats//unique_levels_bubble.png"),
+               h3("Playtime"),
+               # img(src = "images//stats//unique_leveling_epoch.png", width=1000,eigth=1000),
+               img(src = "images//stats//unique_leveling_hours.png", width =
+                     900, eigth = 900),
+               h3('Leveling Time'),
+               img(src = "images//stats//unique_playtime_years.png", width =
+                     700, eigth = 700)
              )
-  )), 
+           )),
   tabPanel("global",
            sidebarLayout(
-             sidebarPanel(
-               p("testo")
-             ),
+             sidebarPanel(p("EXPLANATION TEXT HERE")),
              mainPanel(
                h3("Gender"),
                img(src = "images//stats//globals_genders.png"),
@@ -98,46 +102,23 @@ tabsetPanel(
                h3("Levels"),
                img(src = "images//stats//globals_levels_line.png"),
                # br(),
-               img(src = "images//stats//globals_levels_bubble.png")
+               img(src = "images//stats//globals_levels_bubble.png"),
+               h3("Playtime"),
+               # img(src = "images//stats//globals_leveling_epoch.png"),
+               img(src = "images//stats//globals_leveling_hours.png", width =
+                     900, eigth = 900),
+               h3('Leveling Time'),
+               img(src = "images//stats//globals_playtime_years.png", width =
+                     700, eigth = 700)
              )
-           )
-           )
-  ),
-h3("Time Stats"),
-    
+           ))
+),
 
 ###########################################################
 # ITEMSETS
   h2("Itemsets"),
 
-# h3("Gender"),
-# sidebarLayout(
-#   sidebarPanel("TAB_HERE genders numbers"),
-#   mainPanel(img(src = "images//stats//unique_genders.png"))
-# ),
-# h3("Regions"),
-# sidebarLayout(
-#   sidebarPanel("TAB_HERE genders numbers"),
-#   mainPanel(img(src = "images//stats//unique_regions_locales.png"))
-# ),
-# h3("Races"),
-# sidebarLayout(
-#   sidebarPanel("TAB_HERE genders numbers"),
-#   mainPanel(img(src = "images//stats//unique_races.png"))
-# ),
-# h3("Classes"),
-# sidebarLayout(
-#   sidebarPanel("TAB_HERE genders numbers"),
-#   mainPanel(img(src = "images//stats//unique_classes.png"))
-# ),
-# h3("Levels"),
-# sidebarLayout(
-#   sidebarPanel("TAB_HERE genders numbers"),
-#   mainPanel(img(src = "images//stats//unique_levels_line.png"))
-# ),
-# sidebarLayout(
-#   sidebarPanel("TAB_HERE genders numbers"),
-#   mainPanel(img(src = "images//stats//unique_levels_bubble.png")),
+
 ###########################################################
 # SIMILARITY
   h2("Similarity"),
