@@ -125,5 +125,40 @@ shinyServer(function(input, output) {
     # Return a list containing the filename
     list(includeHTML(filepath))
   })
+  
+  ###########################################################
+  # SIMILARITY HEATMAP: SELECT IMAGE UNIQUE class/level/class&level/region
+  output$plot_heatmap_mlp <- renderImage({
+    i_region <- input$regionItem
+    i_level <- input$levelItem
+    i_class <- input$classItem
+    i_distance <- input$distance_type
+    
+    filename <- 'sorted_matrix_unique'
+    if (i_region == 'none') {
+      if (i_level == 'all' & i_class == '0') {
+        return()
+      }
+      if (i_class != '0') {
+        filename <- paste0(filename, '_c', i_class)
+      }
+      if (i_level != 'all') {
+        filename <- paste0(filename, '_lv', i_level)
+      }
+      
+    } else{
+      filename <- paste0(filename,'_', i_region)
+    }
+    
+    filename <- paste0(filename, "[", i_distance, "]_heatmap_mpl.png")
+    
+    filepath <-
+      normalizePath(file.path('www//images//similarity', filename))
+    # Return a list containing the filename
+    list(src = filepath,
+         width = 500,
+         height = 500
+    )
+  }, deleteFile = FALSE)
 
 })

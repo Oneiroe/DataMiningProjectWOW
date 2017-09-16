@@ -143,7 +143,7 @@ shinyUI(
               "area_type",
               label = "Kind of plot",
               choices = itemsets_stacked_area_types,
-              selected = stats_pages[1]
+              selected = itemsets_stacked_area_types[1]
             )
           ),
           mainPanel(imageOutput("plot_stacked_area"))
@@ -180,7 +180,44 @@ shinyUI(
     
     ###########################################################
     # SIMILARITY
-    h2("Similarity")
+    h2("Similarity"),
+    sidebarLayout(
+      sidebarPanel(),
+      mainPanel(
+        ##############################
+        # heatmap
+        sidebarLayout(
+          sidebarPanel(
+            position = "right",
+            selectInput(
+              "distance_type",
+              label = "Select distance measure",
+              choices = distances,
+              selected = distances[1]
+            )
+          ),
+          mainPanel(imageOutput("plot_heatmap_mlp"))
+        )
+        
+        # ##############################
+        # # heatmap grid
+        # sidebarLayout(
+        #   sidebarPanel(
+        #     position = "right",
+        #     radioButtons("threshold",
+        #                  label = "Threshold (%):",
+        #                  choices = thresholds)
+        #   ),
+        #   mainPanel(imageOutput("plot_treemap"))
+        # )
+      )
+    ),
+    ###########################################################
+    # CONCLUSIONS
+    
+    ###########################################################
+    # EXTRA
+    h2("DataArt")
   )
   
 )
