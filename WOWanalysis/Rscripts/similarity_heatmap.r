@@ -7,7 +7,7 @@ similarity_heatmap <- function(input_path, output_base_path) {
   # distance matrix
   # d <- as.dist(t(as.matrix(m)), diag = TRUE, upper = TRUE)
   d <- data.matrix(m)
-  
+
   # symmetric matrix
   sym <- pmax(d, t(d), na.rm = TRUE)
   
@@ -23,28 +23,26 @@ similarity_heatmap <- function(input_path, output_base_path) {
     res = 300,
     height = 20
   )
-  
+
   # heatmap
-  heatmap.2(
+  heatmap(
     sym,
-    dendrogram = 'none',
-    Rowv = FALSE,
-    Colv = FALSE,
+    Rowv = NA,
+    Colv = NA,
     symm = TRUE,
-    srtCol = 45,
-    margins = c(12, 8),
-    trace = "none"
+    margins = c(12, 8)
   )
-  
+
   dev.off()
   return()
 }
 
-args = commandArgs(trailingOnly = TRUE)
-if (length(args) == 2) {
-  similarity_heatmap(args[1], args[2])
-}
+# args = commandArgs(trailingOnly = TRUE)
+# if (length(args) == 2) {
+#   similarity_heatmap(args[1], args[2])
+# }
 
-# input_path <- "D:\\Università\\Data Mining\\PROJECT\\DataMiningProjectWOW\\Results\\similarity\\sorted_matrix_unique_c12_lv100[appearance].csv"
-# output_base_path <- "D:\\Università\\Data Mining\\PROJECT\\DataMiningProjectWOW\\Results\\similarity\\graphs"
-# similarity_heatmap(input_path, output_base_path)
+
+input_path <- "D:\\Università\\Data Mining\\PROJECT\\DataMiningProjectWOW\\Results\\similarity\\sorted_matrix_unique_c10[general].csv"
+output_base_path <- "D:\\Università\\Data Mining\\PROJECT\\DataMiningProjectWOW\\Results\\similarity\\graphs"
+similarity_heatmap(input_path, output_base_path)

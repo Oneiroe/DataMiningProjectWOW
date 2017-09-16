@@ -8,13 +8,13 @@ similarity_dendogram_heatmap <-
     # distance matrix
     # d <- as.dist(t(as.matrix(m)), diag = TRUE, upper = TRUE)
     d <- data.matrix(m)
-    
+
     # symmetric matrix
     sym <- pmax(d, t(d), na.rm = TRUE)
     
     
     # d <- as.dist(sym)
-    
+
     # dendogram
     hc <- hclust(as.dist(sym))
     
@@ -42,7 +42,7 @@ similarity_dendogram_heatmap <-
       res = 300,
       height = 20
     )
-    
+
     # heatmap
     heatmap.2(
       sym,
@@ -57,13 +57,12 @@ similarity_dendogram_heatmap <-
     return()
   }
 
-args = commandArgs(trailingOnly = TRUE)
-if (length(args) == 2) {
-  similarity_dendogram_heatmap(args[1], args[2])
-}
+# args = commandArgs(trailingOnly = TRUE)
+# if (length(args) == 2) {
+#   similarity_dendogram_heatmap(args[1], args[2])
+# }
 
-# input_path <-
-#   "D:\\Università\\Data Mining\\PROJECT\\DataMiningProjectWOW\\Results\\similarity\\sorted_matrix_unique_c12_lv100[appearance].csv"
-# output_base_path <-
-#   "D:\\Università\\Data Mining\\PROJECT\\DataMiningProjectWOW\\Results\\similarity\\graphs"
-# similarity_dendogram_heatmap(input_path, output_base_path)
+input_path <- "D:\\Università\\Data Mining\\PROJECT\\DataMiningProjectWOW\\Results\\similarity\\sorted_matrix_unique_c2[general].csv"
+output_base_path <-
+  "D:\\Università\\Data Mining\\PROJECT\\DataMiningProjectWOW\\Results\\similarity\\graphs"
+similarity_dendogram_heatmap(input_path, output_base_path)
