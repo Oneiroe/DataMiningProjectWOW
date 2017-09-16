@@ -1,5 +1,3 @@
-
-
 # This is the server logic for a Shiny web application.
 # You can find out more about building applications with Shiny here:
 #
@@ -9,7 +7,6 @@
 library(shiny)
 
 shinyServer(function(input, output) {
-  
   output$distPlot <- renderPlot({
     # generate bins based on input$bins from ui.R
     x    <- faithful[, 2]
@@ -24,104 +21,76 @@ shinyServer(function(input, output) {
   })
   
   ###########################################################
-  # GENDER: SELECT IMAGE GLOBAL/UNIQUE 
-  output$selected_uniq <- renderImage({
-    filename <- normalizePath(file.path('www//images//stats',
-                                        paste0(input$uniq, "_genders.png")))
+  # ITEMSETS STACKED AREA: SELECT IMAGE UNIQUE class/level/class&level/region
+  output$plot_stacked_area <- renderImage({
+    i_region <- input$regionItem
+    i_level <- input$levelItem
+    i_class <- input$classItem
+    i_type <- input$area_type
     
-    # Return a list containing the filename
-    list(src = filename)
-  }, deleteFile = FALSE)
-  ###########################################################
-  # REGIONS: SELECT IMAGE GLOBAL/UNIQUE 
-  output$selected_uniq <- renderImage({
-    filename <- normalizePath(file.path('www//images//stats',
-                                        paste0(input$uniq, "_regions_locales.png")))
+    filename <- 'itemsets_unique'
+    if (i_region == 'none') {
+      if (i_level == 'all' & i_class == '0') {
+        return()
+      }
+      if (i_class != '0') {
+        filename <- paste0(filename, '_c', i_class)
+      }
+      if (i_level != 'all') {
+        filename <- paste0(filename, '_lv', i_level)
+      }
+      
+    } else{
+      filename <- paste0('itemsets_unique_', i_region)
+    }
     
+    if (i_type == 'normal') {
+      filename <- paste0(filename, "_stacked_area.png")
+    } else{
+      filename <- paste0(filename, "_stacked_area", i_type, ".png")
+    }
+    print(filename)
+    filepath <-
+      normalizePath(file.path('www//images//itemsets', filename))
     # Return a list containing the filename
-    list(src = filename)
-  }, deleteFile = FALSE)
-  ###########################################################
-  # RACES: SELECT IMAGE GLOBAL/UNIQUE 
-  output$selected_uniq <- renderImage({
-    filename <- normalizePath(file.path('www//images//stats',
-                                        paste0(input$uniq, "_races.png")))
-    
-    # Return a list containing the filename
-    list(src = filename)
-  }, deleteFile = FALSE)
-  ###########################################################
-  # CLASSES: SELECT IMAGE GLOBAL/UNIQUE 
-  output$selected_uniq <- renderImage({
-    filename <- normalizePath(file.path('www//images//stats',
-                                        paste0(input$uniq, "_classes.png")))
-    
-    # Return a list containing the filename
-    list(src = filename)
-  }, deleteFile = FALSE)
-  ###########################################################
-  # LEVELS LINES: SELECT IMAGE GLOBAL/UNIQUE 
-  output$selected_uniq <- renderImage({
-    filename <- normalizePath(file.path('www//images//stats',
-                                        paste0(input$uniq, "_levels_line.png")))
-    
-    # Return a list containing the filename
-    list(src = filename)
-  }, deleteFile = FALSE)
-  ###########################################################
-  # LEVELS BUBBLE: SELECT IMAGE GLOBAL/UNIQUE 
-  output$selected_uniq <- renderImage({
-    filename <- normalizePath(file.path('www//images//stats',
-                                        paste0(input$uniq, "_levels_bubble.png")))
-    
-    # Return a list containing the filename
-    list(src = filename)
-  }, deleteFile = FALSE)
-  ###########################################################
-  # GENDER: SELECT IMAGE GLOBAL/UNIQUE 
-  output$selected_uniq <- renderImage({
-    filename <- normalizePath(file.path('www//images//stats',
-                                        paste0(input$uniq, "_genders.png")))
-    
-    # Return a list containing the filename
-    list(src = filename)
-  }, deleteFile = FALSE)
-  ###########################################################
-  # GENDER: SELECT IMAGE GLOBAL/UNIQUE 
-  output$selected_uniq <- renderImage({
-    filename <- normalizePath(file.path('www//images//stats',
-                                        paste0(input$uniq, "_genders.png")))
-    
-    # Return a list containing the filename
-    list(src = filename)
-  }, deleteFile = FALSE)
-  ###########################################################
-  # GENDER: SELECT IMAGE GLOBAL/UNIQUE 
-  output$selected_uniq <- renderImage({
-    filename <- normalizePath(file.path('www//images//stats',
-                                        paste0(input$uniq, "_genders.png")))
-    
-    # Return a list containing the filename
-    list(src = filename)
-  }, deleteFile = FALSE)
-  ###########################################################
-  # GENDER: SELECT IMAGE GLOBAL/UNIQUE 
-  output$selected_uniq <- renderImage({
-    filename <- normalizePath(file.path('www//images//stats',
-                                        paste0(input$uniq, "_genders.png")))
-    
-    # Return a list containing the filename
-    list(src = filename)
-  }, deleteFile = FALSE)
-  ###########################################################
-  # GENDER: SELECT IMAGE GLOBAL/UNIQUE 
-  output$selected_uniq <- renderImage({
-    filename <- normalizePath(file.path('www//images//stats',
-                                        paste0(input$uniq, "_genders.png")))
-    
-    # Return a list containing the filename
-    list(src = filename)
+    list(src = filepath,
+         width = 250,
+         height = 250)
   }, deleteFile = FALSE)
   
+  ###########################################################
+  # ITEMSETS TREEMAP: SELECT IMAGE UNIQUE class/level/class&level/region and threshold
+  output$plot_treemap <- renderImage({
+    i_region <- input$regionItem
+    i_level <- input$levelItem
+    i_class <- input$classItem
+    i_threshold <- input$threshold
+    print(i_threshold)
+    filename <- 'itemsets_unique'
+    if (i_region == 'none') {
+      if (i_level == 'all' & i_class == '0') {
+        return()
+      }
+      if (i_class != '0') {
+        filename <- paste0(filename, '_c', i_class)
+      }
+      if (i_level != 'all') {
+        filename <- paste0(filename, '_lv', i_level)
+      }
+      
+    } else{
+      filename <- paste0('itemsets_unique_', i_region)
+    }
+    
+    filename <- paste0(filename, "_treemap[", i_threshold, "].png")
+    print(filename)
+    filepath <-
+      normalizePath(file.path('www//images//itemsets', filename))
+    # Return a list containing the filename
+    list(src = filepath,
+         width = 250,
+         height = 250)
+  }, deleteFile = FALSE)
   
+
 })
