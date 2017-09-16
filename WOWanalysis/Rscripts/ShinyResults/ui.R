@@ -198,18 +198,25 @@ shinyUI(
           ),
           mainPanel(imageOutput("plot_heatmap_mlp"))
         )
-        
+        ,
         # ##############################
         # # heatmap grid
-        # sidebarLayout(
-        #   sidebarPanel(
-        #     position = "right",
-        #     radioButtons("threshold",
-        #                  label = "Threshold (%):",
-        #                  choices = thresholds)
-        #   ),
-        #   mainPanel(imageOutput("plot_treemap"))
-        # )
+        p('general'),
+        imageOutput("plot_heatmap_mlp_grid_general"),
+        p('appearance'),
+        imageOutput("plot_heatmap_mlp_grid_appearance"),
+        p('items'),
+        imageOutput("plot_heatmap_mlp_grid_items"),
+        p('mounts'),
+        imageOutput("plot_heatmap_mlp_grid_mounts"),
+        p('pets'),
+        imageOutput("plot_heatmap_mlp_grid_pets"),
+        p('professions'),
+        imageOutput("plot_heatmap_mlp_grid_professions"),
+        p('stats'),
+        imageOutput("plot_heatmap_mlp_grid_stats"),
+        p('talents'),
+        imageOutput("plot_heatmap_mlp_grid_talents")
       )
     ),
     ###########################################################

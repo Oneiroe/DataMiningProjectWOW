@@ -6,6 +6,15 @@
 
 library(shiny)
 
+distances <- c('general',
+               'appearance',
+               'items',
+               'mounts',
+               'pets',
+               'professions',
+               'stats',
+               'talents')
+
 shinyServer(function(input, output) {
   output$distPlot <- renderPlot({
     # generate bins based on input$bins from ui.R
@@ -126,14 +135,7 @@ shinyServer(function(input, output) {
     list(includeHTML(filepath))
   })
   
-  ###########################################################
-  # SIMILARITY HEATMAP: SELECT IMAGE UNIQUE class/level/class&level/region
-  output$plot_heatmap_mlp <- renderImage({
-    i_region <- input$regionItem
-    i_level <- input$levelItem
-    i_class <- input$classItem
-    i_distance <- input$distance_type
-    
+  select_heatmap_mpl<-function(i_region,i_level,i_class,i_distance){
     filename <- 'sorted_matrix_unique'
     if (i_region == 'none') {
       if (i_level == 'all' & i_class == '0') {
@@ -154,10 +156,130 @@ shinyServer(function(input, output) {
     
     filepath <-
       normalizePath(file.path('www//images//similarity', filename))
+    
+    return(filepath)
+  }
+  
+  ###########################################################
+  # SIMILARITY HEATMAP: SELECT IMAGE UNIQUE class/level/class&level/region
+  output$plot_heatmap_mlp <- renderImage({
+    i_region <- input$regionItem
+    i_level <- input$levelItem
+    i_class <- input$classItem
+    i_distance <- input$distance_type
+    
+    filepath <- select_heatmap_mpl(i_region, i_level, i_class, i_distance)
     # Return a list containing the filename
     list(src = filepath,
-         width = 500,
-         height = 500
+         width = 700,
+         height = 700
+    )
+  }, deleteFile = FALSE)
+  
+  ###########################################################
+  # SIMILARITY HEATMAP GRID distances: SELECT IMAGE UNIQUE class/level/class&level/region
+  output$plot_heatmap_mlp_grid_general <- renderImage({
+    i_region <- input$regionItem
+    i_level <- input$levelItem
+    i_class <- input$classItem
+    i_distance <- 'general'
+    
+    filepath <- select_heatmap_mpl(i_region, i_level, i_class, i_distance)
+    # Return a list containing the filename
+    list(src = filepath,
+         width = 400,
+         height = 400
+    )
+  }, deleteFile = FALSE)
+  output$plot_heatmap_mlp_grid_appearance <- renderImage({
+    i_region <- input$regionItem
+    i_level <- input$levelItem
+    i_class <- input$classItem
+    i_distance <- 'appearance'
+    
+    filepath <- select_heatmap_mpl(i_region, i_level, i_class, i_distance)
+    # Return a list containing the filename
+    list(src = filepath,
+         width = 400,
+         height = 400
+    )
+  }, deleteFile = FALSE)
+  output$plot_heatmap_mlp_grid_items <- renderImage({
+    i_region <- input$regionItem
+    i_level <- input$levelItem
+    i_class <- input$classItem
+    i_distance <- 'items'
+    
+    filepath <- select_heatmap_mpl(i_region, i_level, i_class, i_distance)
+    # Return a list containing the filename
+    list(src = filepath,
+         width = 400,
+         height = 400
+    )
+  }, deleteFile = FALSE)
+  output$plot_heatmap_mlp_grid_mounts <- renderImage({
+    i_region <- input$regionItem
+    i_level <- input$levelItem
+    i_class <- input$classItem
+    i_distance <- 'mounts'
+    
+    filepath <- select_heatmap_mpl(i_region, i_level, i_class, i_distance)
+    # Return a list containing the filename
+    list(src = filepath,
+         width = 400,
+         height = 400
+    )
+  }, deleteFile = FALSE)
+  output$plot_heatmap_mlp_grid_pets <- renderImage({
+    i_region <- input$regionItem
+    i_level <- input$levelItem
+    i_class <- input$classItem
+    i_distance <- 'pets'
+    
+    filepath <- select_heatmap_mpl(i_region, i_level, i_class, i_distance)
+    # Return a list containing the filename
+    list(src = filepath,
+         width = 400,
+         height = 400
+    )
+  }, deleteFile = FALSE)
+  output$plot_heatmap_mlp_grid_professions <- renderImage({
+    i_region <- input$regionItem
+    i_level <- input$levelItem
+    i_class <- input$classItem
+    i_distance <- 'professions'
+    
+    filepath <- select_heatmap_mpl(i_region, i_level, i_class, i_distance)
+    # Return a list containing the filename
+    list(src = filepath,
+         width = 400,
+         height = 400
+    )
+  }, deleteFile = FALSE)
+  output$plot_heatmap_mlp_grid_stats <- renderImage({
+    i_region <- input$regionItem
+    i_level <- input$levelItem
+    i_class <- input$classItem
+    i_distance <- 'stats'
+    
+    filepath <- select_heatmap_mpl(i_region, i_level, i_class, i_distance)
+    # Return a list containing the filename
+    list(src = filepath,
+         width = 400,
+         height = 400
+    )
+  }, deleteFile = FALSE)
+  output$plot_heatmap_mlp_grid_talents <- renderImage({
+    i_region <- input$regionItem
+    i_level <- input$levelItem
+    i_class <- input$classItem
+    i_distance <- 'talents'
+    
+    filepath <- select_heatmap_mpl(i_region, i_level, i_class, i_distance)
+    # Return a list containing the filename
+    list(src = filepath,
+         width = 400,
+         height = 400
     )
   }, deleteFile = FALSE)
 
