@@ -57,12 +57,12 @@ similarity_dendogram_heatmap <-
     return()
   }
 
-# args = commandArgs(trailingOnly = TRUE)
-# if (length(args) == 2) {
-#   similarity_dendogram_heatmap(args[1], args[2])
-# }
+args = commandArgs(trailingOnly = TRUE)
+if (length(args) == 2) {
+  similarity_dendogram_heatmap(args[1], args[2])
+}
 
-input_path <- "D:\\Università\\Data Mining\\PROJECT\\DataMiningProjectWOW\\Results\\similarity\\sorted_matrix_unique_c2[general].csv"
-output_base_path <-
-  "D:\\Università\\Data Mining\\PROJECT\\DataMiningProjectWOW\\Results\\similarity\\graphs"
-similarity_dendogram_heatmap(input_path, output_base_path)
+# input_path <- "D:\\Università\\Data Mining\\PROJECT\\DataMiningProjectWOW\\Results\\similarity\\sorted_matrix_unique_c2[general].csv"
+# output_base_path <-
+#   "D:\\Università\\Data Mining\\PROJECT\\DataMiningProjectWOW\\Results\\similarity\\graphs"
+# similarity_dendogram_heatmap(input_path, output_base_path)

@@ -42,15 +42,8 @@ shinyUI(
     ###########################################################
     # INTRO
     # Application title
-    titlePanel("Data Mining Project WOW"),
-    p('paragrafo'),
-    p('paragraph 2'),
-    sidebarLayout(
-      position = "left",
-      sidebarPanel("sidebar panel"),
-      mainPanel("main panel")
-    ),
-    
+    titlePanel("Data Mining Project WOW(!)"),
+    img(src = "images//hdd_space_allocation.png", style = "width:100%"),
     ###########################################################
     # STATS
     h2("Stats"),
@@ -117,37 +110,39 @@ shinyUI(
           "classItem",
           label = "Select Class",
           choices = classes,
-          selected = stats_pages[2]
+          selected = stats_pages[1]
         ),
         selectInput(
           "levelItem",
           label = "Select Level",
           choices = levels,
-          selected = levels[2]
+          selected = levels[1]
         ),
         p('or'),
         selectInput(
           "regionItem",
           label = "Select region",
           choices = regions,
-          selected = regions[2]
-        )
+          selected = regions[1]
+        ),
+        br(),
+        selectInput(
+          "area_type",
+          label = "Kind of plot",
+          choices = itemsets_stacked_area_types,
+          selected = itemsets_stacked_area_types[1]
+        ),
+        br(),
+        radioButtons("threshold",
+                     label = "Threshold (%):",
+                     choices = thresholds,
+                     selected = thresholds[8])
+        
       ),
       mainPanel(
         ##############################
         # stacked area
-        sidebarLayout(
-          sidebarPanel(
-            position = "right",
-            selectInput(
-              "area_type",
-              label = "Kind of plot",
-              choices = itemsets_stacked_area_types,
-              selected = itemsets_stacked_area_types[1]
-            )
-          ),
-          mainPanel(imageOutput("plot_stacked_area"))
-        ),
+        imageOutput("plot_stacked_area", height = "auto"),
         
         # ##############################
         # # treemap static
@@ -163,17 +158,8 @@ shinyUI(
         
         #############################
         # treemap D3
-        sidebarLayout(
-          sidebarPanel(
-            position = "right",
-            radioButtons("threshold",
-                         label = "Threshold (%):",
-                         choices = thresholds)
-          ),
-          mainPanel(
-            uiOutput("plot_treemap_d3")
-          )
-        )
+        uiOutput("plot_treemap_d3")
+        
       )
     ),
     
@@ -182,41 +168,74 @@ shinyUI(
     # SIMILARITY
     h2("Similarity"),
     sidebarLayout(
-      sidebarPanel(),
+      sidebarPanel(
+        selectInput(
+          "classSimilarity",
+          label = "Select Class",
+          choices = classes,
+          selected = stats_pages[1]
+        ),
+        selectInput(
+          "levelSimilarity",
+          label = "Select Level",
+          choices = levels,
+          selected = levels[1]
+        ),
+        p('or'),
+        selectInput(
+          "regionSimilarity",
+          label = "Select region",
+          choices = c('none', 'TW'),
+          selected = regions[1]
+        ),
+        br(),
+        selectInput(
+          "distance_type",
+          label = "Select distance measure",
+          choices = distances,
+          selected = distances[1]
+        ),
+        br(),
+        p('Note: dendogram only for class+level, excluding classes 2,5,7,11')
+      ),
       mainPanel(
         ##############################
         # heatmap
-        sidebarLayout(
-          sidebarPanel(
-            position = "right",
-            selectInput(
-              "distance_type",
-              label = "Select distance measure",
-              choices = distances,
-              selected = distances[1]
-            )
-          ),
-          mainPanel(imageOutput("plot_heatmap_mlp"))
-        )
-        ,
+        
+        fluidRow(
+          imageOutput("plot_heatmap_mlp", height = "auto"),
+          imageOutput("plot_heatmap_dendogram", height = "auto")
+        ),
         # ##############################
         # # heatmap grid
-        p('general'),
-        imageOutput("plot_heatmap_mlp_grid_general"),
-        p('appearance'),
-        imageOutput("plot_heatmap_mlp_grid_appearance"),
-        p('items'),
-        imageOutput("plot_heatmap_mlp_grid_items"),
-        p('mounts'),
-        imageOutput("plot_heatmap_mlp_grid_mounts"),
-        p('pets'),
-        imageOutput("plot_heatmap_mlp_grid_pets"),
-        p('professions'),
-        imageOutput("plot_heatmap_mlp_grid_professions"),
-        p('stats'),
-        imageOutput("plot_heatmap_mlp_grid_stats"),
-        p('talents'),
-        imageOutput("plot_heatmap_mlp_grid_talents")
+        fluidRow(
+          p('general'),
+          imageOutput("plot_heatmap_mlp_grid_general", height = "auto"),
+          imageOutput("plot_heatmap_dendogram_grid_general", height = "auto"),
+          p('appearance'),
+          imageOutput("plot_heatmap_mlp_grid_appearance", height = "auto"),
+          imageOutput("plot_heatmap_dendogram_grid_appearance", height = "auto"),
+          p('items'),
+          imageOutput("plot_heatmap_mlp_grid_items", height = "auto"),
+          imageOutput("plot_heatmap_dendogram_grid_items", height = "auto"),
+          p('mounts'),
+          imageOutput("plot_heatmap_mlp_grid_mounts", height = "auto"),
+          imageOutput("plot_heatmap_dendogram_grid_mounts", height = "auto"),
+          p('pets'),
+          imageOutput("plot_heatmap_mlp_grid_pets", height = "auto"),
+          imageOutput("plot_heatmap_dendogram_grid_pets", height = "auto"),
+          p('professions'),
+          imageOutput("plot_heatmap_mlp_grid_professions", height = "auto"),
+          imageOutput("plot_heatmap_dendogram_grid_professions", height = "auto"),
+          p('stats'),
+          imageOutput("plot_heatmap_mlp_grid_stats", height = "auto"),
+          imageOutput("plot_heatmap_dendogram_grid_stats", height = "auto"),
+          p('talents'),
+          imageOutput("plot_heatmap_mlp_grid_talents", height = "auto"),
+          imageOutput("plot_heatmap_dendogram_grid_talents", height = "auto")
+        )
+        # h3("3D caption"),
+        # uiOutput("plot_heatmap_3d")
       )
     ),
     ###########################################################
@@ -228,3 +247,4 @@ shinyUI(
   )
   
 )
+
