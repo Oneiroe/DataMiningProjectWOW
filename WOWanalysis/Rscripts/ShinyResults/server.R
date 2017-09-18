@@ -138,6 +138,10 @@ shinyServer(function(input, output) {
     list(includeHTML(filepath))
   })
   
+  output$threshold_calculator <- renderText({ 
+    as.character(input$threshNum*as.numeric(input$threshold))
+  })
+  
   ###########################################################
   # SIMILARITY UTILS
   select_heatmap_mpl <- function(i_region, i_level, i_class, i_distance) {

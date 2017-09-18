@@ -42,6 +42,7 @@ shinyUI(
     ###########################################################
     # INTRO
     # Application title
+    img(src = "images//DataArt//similarity_100x100_2.PNG", style = 'width:100%'),
     titlePanel("Data Mining Project WOW(!)"),
     img(src = "images//hdd_space_allocation.png", style = "width:100%"),
     ###########################################################
@@ -99,7 +100,7 @@ shinyUI(
                  )
                ))
     ),
-    
+    img(src = "images//DataArt//similarity_100x100_1.PNG", style = 'width:100%'),
     ###########################################################
     # ITEMSETS
     h2("Itemsets"),
@@ -133,11 +134,16 @@ shinyUI(
           selected = itemsets_stacked_area_types[1]
         ),
         br(),
-        radioButtons("threshold",
-                     label = "Threshold (%):",
-                     choices = thresholds,
-                     selected = thresholds[8])
-        
+        radioButtons(
+          "threshold",
+          label = "Threshold (%):",
+          choices = thresholds,
+          selected = thresholds[8]
+        ),
+        numericInput("threshNum", 
+                     h3("Threshold Calculator"),
+                     value = 10000),
+        textOutput("threshold_calculator")
       ),
       mainPanel(
         ##############################
@@ -186,7 +192,7 @@ shinyUI(
           "regionSimilarity",
           label = "Select region",
           choices = c('none', 'TW'),
-          selected = regions[1]
+          selected = 'TW'
         ),
         br(),
         selectInput(
@@ -196,7 +202,9 @@ shinyUI(
           selected = distances[1]
         ),
         br(),
-        p('Note: dendogram only for class+level, excluding classes 2,5,7,11')
+        p(
+          'Note: dendogram only for class+level, excluding classes 2,5,7,11'
+        )
       ),
       mainPanel(
         ##############################
@@ -243,8 +251,8 @@ shinyUI(
     
     ###########################################################
     # EXTRA
-    h2("DataArt")
+    h2("thanks for the attention!"),
+    img(src = "images//DataArt//similarity_100x100_3.PNG", style = 'width:100%')
   )
   
 )
-
